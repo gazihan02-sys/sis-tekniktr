@@ -1,0 +1,19 @@
+[Unit]
+Description=Sis Teknik API (Rust Axum)
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/opt/sis-teknik
+ExecStart=/opt/sis-teknik/backend/target/release/api
+Restart=always
+RestartSec=3
+Environment=API_PORT=3000
+Environment=MONGODB_URI=mongodb://127.0.0.1:27017
+Environment=MONGODB_DATABASE=sis_teknik
+Environment=FRONTEND_URL=https://tamir.sis-teknik.com.tr
+
+[Install]
+WantedBy=multi-user.target

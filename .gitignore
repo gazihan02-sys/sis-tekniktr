@@ -1,0 +1,32 @@
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Rust
+/target/
+backend/target/
+**/*.rs.bk
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+backend_sms.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Env / secrets
+.env
+**/.env
+
+# Temp
+tmp/
+
+# VSCode
+.vscode/
