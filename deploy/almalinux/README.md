@@ -1,5 +1,26 @@
 # AlmaLinux + LiteSpeed Deployment (tamir.sis-teknik.com.tr)
 
+## Hızlı kurulum (tek komut)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gazihan02-sys/siste/main/deploy/almalinux/install_and_start.sh -o install_and_start.sh
+chmod +x install_and_start.sh
+sudo ./install_and_start.sh
+```
+
+İsteğe bağlı değişkenler:
+
+```bash
+sudo REPO_URL="https://github.com/gazihan02-sys/siste.git" \
+	BRANCH="main" \
+	APP_DIR="/opt/sis-teknik" \
+	API_PORT="3000" \
+	MONGODB_URI="mongodb://127.0.0.1:27017" \
+	MONGODB_DATABASE="sis_teknik" \
+	FRONTEND_URL="https://tamir.sis-teknik.com.tr" \
+	./install_and_start.sh
+```
+
 ## 1) Sunucu hazırlığı
 
 ```bash
