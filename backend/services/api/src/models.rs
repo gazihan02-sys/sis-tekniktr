@@ -60,6 +60,21 @@ pub fn status_string_to_id(status: &str) -> Option<i32> {
     }
 }
 
+pub fn status_id_aliases(id: i32) -> Option<Vec<&'static str>> {
+    match id {
+        1 => Some(vec!["MÜŞTERI_KABUL", "MUSTERI_KABUL", "MÜŞTERİ_KABUL", "musteri_kabul"]),
+        2 => Some(vec!["TEKNISYENE_VERİLDİ", "TEKNISYENE_VERILDI", "teknisyene_verildi"]),
+        3 => Some(vec!["İŞLEM_BEKLİYOR", "ISLEM_BEKLIYOR", "islem_bekliyor"]),
+        4 => Some(vec!["PARÇA_BEKLİYOR", "PARCA_BEKLIYOR", "parca_bekliyor"]),
+        5 => Some(vec!["MERKEZE_SEVK", "merkeze_sevk"]),
+        6 => Some(vec!["DEĞİŞİM", "DEGISIM", "degisim"]),
+        7 => Some(vec!["TAMİR_TAMAMLANDI", "TAMIR_TAMAMLANDI", "tamir_tamamlandi"]),
+        8 => Some(vec!["TESLİM_EDİLDİ", "TESLIM_EDILDI", "teslim_edildi"]),
+        9 => Some(vec!["İADE", "IADE", "iade"]),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub struct MusteriKabul {
@@ -68,6 +83,7 @@ pub struct MusteriKabul {
     pub ad_soyad: String,
     pub telefon: String,
     pub marka_model: String,
+    pub servis_tipi: Option<String>,
     pub aksesuarlar: String,
     pub musteri_sikayeti: String,
     pub not: Option<String>,
@@ -92,6 +108,7 @@ pub struct CreateMusteriKabulRequest {
     pub ad_soyad: String,
     pub telefon: String,
     pub marka_model: String,
+    pub servis_tipi: Option<String>,
     pub aksesuarlar: String,
     pub musteri_sikayeti: String,
     pub not: Option<String>,
@@ -127,6 +144,7 @@ pub struct MusteriKabulResponse {
     pub ad_soyad: String,
     pub telefon: String,
     pub marka_model: String,
+    pub servis_tipi: Option<String>,
     pub aksesuarlar: String,
     pub musteri_sikayeti: String,
     pub not: Option<String>,
@@ -151,6 +169,7 @@ impl MusteriKabul {
             ad_soyad: req.ad_soyad.to_uppercase(),
             telefon: req.telefon.to_uppercase(),
             marka_model: req.marka_model.to_uppercase(),
+            servis_tipi: req.servis_tipi.map(|v| v.to_uppercase()),
             aksesuarlar: req.aksesuarlar.to_uppercase(),
             musteri_sikayeti: req.musteri_sikayeti.to_uppercase(),
             not: req.not.map(|n| n.to_uppercase()),
@@ -177,6 +196,7 @@ impl MusteriKabul {
             ad_soyad: self.ad_soyad,
             telefon: decrypted_phone,
             marka_model: self.marka_model,
+            servis_tipi: self.servis_tipi,
             aksesuarlar: self.aksesuarlar,
             musteri_sikayeti: self.musteri_sikayeti,
             not: self.not,

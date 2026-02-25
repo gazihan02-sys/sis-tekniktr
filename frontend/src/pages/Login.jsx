@@ -1,14 +1,53 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const LOGIN_FAILED_ATTEMPTS_KEY = 'loginFailedAttempts';
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    const fromStorage = Number(localStorage.getItem(LOGIN_FAILED_ATTEMPTS_KEY) || 0);
+    return Number.isFinite(fromStorage) ? fromStorage : 0;
+  });
   const [bgImage, setBgImage] = useState('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
   const [isBrightBackground, setIsBrightBackground] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+  const showTurnstile = failedAttempts >= 3;
   const navigate = useNavigate();
+  const turnstileRef = useState(() => ({ current: null }))[0];
+  const turnstileWidgetIdRef = useState(() => ({ current: null }))[0];
+
+  useEffect(() => {
+    if (!showTurnstile || !turnstileSiteKey) return;
+
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileRef.current) return;
+      if (turnstileWidgetIdRef.current !== null) return;
+
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => setTurnstileToken(token),
+        'expired-callback': () => setTurnstileToken(''),
+        'error-callback': () => setTurnstileToken(''),
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderWidget;
+    document.head.appendChild(script);
+  }, [showTurnstile, turnstileSiteKey, turnstileRef, turnstileWidgetIdRef]);
 
   const analyzeImageBrightness = (imageUrl) => {
     const img = new Image();
@@ -54,7 +93,7 @@ export default function Login() {
     // Fetch Bing's daily image
     const fetchBingImage = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/bing/daily-image');
+        const response = await fetch('/api/bing/daily-image');
         if (!response.ok) {
           return;
         }
@@ -87,10 +126,16 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (showTurnstile && !turnstileToken) {
+      setError('Lütfen Cloudflare doğrulamasını tamamlayın.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,12 +143,20 @@ export default function Login() {
         body: JSON.stringify({
           username: username,
           password: password,
+          turnstile_token: turnstileToken,
         }),
       });
 
       if (!response.ok) {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
+        localStorage.setItem(LOGIN_FAILED_ATTEMPTS_KEY, String(nextAttempts));
         setError('Hatalı kullanıcı adı veya şifre. Lütfen tekrar deneyin.');
         setPassword('');
+        if (window.turnstile && turnstileWidgetIdRef.current !== null) {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+        }
+        setTurnstileToken('');
         setLoading(false);
         return;
       }
@@ -113,6 +166,12 @@ export default function Login() {
       // Token'ı localStorage'a kaydet
       localStorage.setItem('token', data.token);
       localStorage.setItem('username', username);
+      localStorage.setItem('level', data.level || 'level2');
+      if (data.theme_color) {
+        localStorage.setItem('themeColor', data.theme_color);
+      }
+      setFailedAttempts(0);
+      localStorage.removeItem(LOGIN_FAILED_ATTEMPTS_KEY);
       
       // Ana sayfaya yönlendir
       navigate('/');
@@ -126,7 +185,7 @@ export default function Login() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-start px-4 md:px-10 lg:px-16 relative bg-gray-900 overflow-hidden"
+      className="min-h-screen flex items-center justify-center md:justify-end px-4 md:px-10 lg:px-16 relative bg-gray-900 overflow-hidden"
       style={{
         backgroundImage: bgImage ? `url(${bgImage})` : 'none',
         backgroundSize: 'cover',
@@ -203,6 +262,16 @@ export default function Login() {
             </div>
 
             {/* Login Button */}
+            {showTurnstile && (
+              <div className="mb-6 p-3 rounded-2xl border border-white/20 bg-black/20">
+                {turnstileSiteKey ? (
+                  <div ref={(el) => { turnstileRef.current = el; }} />
+                ) : (
+                  <p className="text-sm text-red-100">Turnstile site key tanımlı değil.</p>
+                )}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading || password.length === 0 || username.length === 0}

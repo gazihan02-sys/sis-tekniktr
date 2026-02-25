@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tamir Fişi</title>
+    <link rel="stylesheet" href="/repair-slip.css" />
+    <link rel="stylesheet" href="/repair-slip-print.css" media="print" />
+  </head>
+  <body class="repair-slip-body">
+    <div class="repair-slip-page">
+      <div class="repair-slip-toolbar">
+        <button class="repair-slip-print-btn" onclick="window.print()">Yazdır</button>
+      </div>
+
+      <div class="repair-slip" id="slipRoot">
+        <div class="repair-slip-content">
+            <div class="repair-slip-row"><div class="repair-slip-value" id="val-ad_soyad">-</div></div>
+            <div class="repair-slip-row"><div class="repair-slip-value" id="val-telefon">-</div></div>
+            <div class="repair-slip-row"><div class="repair-slip-value" id="val-model">-</div></div>
+            <div class="repair-slip-row"><div class="repair-slip-value repair-slip-fault" id="val-ariza">-</div></div>
+        </div>
+          <div class="repair-slip-footer" id="val-tarih">-</div>
+      </div>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const setText = (id, key) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const value = params.get(key);
+        el.textContent = value && value.trim() ? value : '-';
+      };
+
+      setText('val-ad_soyad', 'ad_soyad');
+      setText('val-telefon', 'telefon');
+      setText('val-model', 'model');
+      setText('val-ariza', 'ariza');
+      setText('val-tarih', 'tarih');
+    </script>
+  </body>
+</html>

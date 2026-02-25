@@ -56,5 +56,7 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub success: bool,
     pub token: Option<String>,
+    pub theme_color: Option<String>,
+    pub level: Option<String>,
     pub message: String,
 }

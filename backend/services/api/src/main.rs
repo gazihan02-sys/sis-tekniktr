@@ -4,8 +4,10 @@ mod handlers;
 mod crypto;
 mod sms;
 mod auth;
+mod sms_queue;
 
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{get, post, delete, put},
     Router,
     http::StatusCode,
@@ -16,7 +18,8 @@ use std::env;
 use dotenvy::dotenv;
 
 use db::connect_db;
-use handlers::{AppState, create_musteri_kabul, get_musteri_kabul, list_musteri_kabul, get_musteri_kabul_stats, list_musteri_kabul_by_status, delete_musteri_kabul, update_musteri_kabul, login, get_bing_daily_image, create_user, list_users, update_user, delete_user, migrate_teknisyen_notes};
+use handlers::{AppState, create_montaj_kayit, create_musteri_kabul, get_musteri_kabul, list_montaj_kayitlari, list_musteri_kabul, get_musteri_kabul_stats, list_musteri_kabul_by_status, delete_musteri_kabul, update_musteri_kabul, resend_musteri_sms, login, get_bing_daily_image, create_user, list_users, update_user, delete_user, migrate_teknisyen_notes, get_system_sync, create_delete_otp, upload_fatura_public, update_montaj_kayit, delete_montaj_kayit, get_montaj_kayit, close_montaj_kayit, download_montaj_files_zip};
+use sms_queue::start_sms_queue_worker;
 
 #[tokio::main]
 async fn main() {
@@ -35,6 +38,7 @@ async fn main() {
         }
     };
 
+    start_sms_queue_worker(database.clone());
     let state = AppState { db: database };
 
     // Routes
@@ -45,12 +49,21 @@ async fn main() {
         .route("/api/users/:id", put(update_user).delete(delete_user))
         .route("/api/migrations/fix-teknisyen-notes", post(migrate_teknisyen_notes))
         .route("/api/bing/daily-image", get(get_bing_daily_image))
+        .route("/api/montaj", get(list_montaj_kayitlari).post(create_montaj_kayit))
+        .route("/api/montaj/:id", get(get_montaj_kayit).put(update_montaj_kayit).delete(delete_montaj_kayit))
+        .route("/api/montaj/:id/kapat", post(close_montaj_kayit))
+        .route("/api/montaj/:id/download-zip", get(download_montaj_files_zip))
         .route("/api/musteri-kabul", post(create_musteri_kabul))
         .route("/api/musteri-kabul", get(list_musteri_kabul))
         .route("/api/musteri-kabul/stats", get(get_musteri_kabul_stats))
+        .route("/api/delete-otp/request", post(create_delete_otp))
+        .route("/api/system/sync", get(get_system_sync))
         .route("/api/musteri-kabul/by-status/:status", get(list_musteri_kabul_by_status))
+        .route("/api/fatura-upload/:id", put(upload_fatura_public))
+        .route("/api/musteri-kabul/:id/resend-sms", post(resend_musteri_sms))
         .route("/api/musteri-kabul/:id", get(get_musteri_kabul).delete(delete_musteri_kabul).put(update_musteri_kabul))
         .with_state(state)
+        .layer(DefaultBodyLimit::max(15 * 1024 * 1024))
         .layer(CorsLayer::permissive());
 
     let port = env::var("API_PORT").unwrap_or_else(|_| "3000".to_string());

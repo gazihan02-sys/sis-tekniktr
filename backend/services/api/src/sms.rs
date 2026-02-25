@@ -161,6 +161,39 @@ TEKNİK ELEKTRONİK 04162161262",
     )
 }
 
+pub fn build_montaj_kurulum_sms_message(customer_name: &str, upload_link: &str) -> String {
+    let upper_name = customer_name.to_uppercase();
+    format!(
+        "SN : {} MÜŞTERİ KAYDINIZ ALINMIŞTIR. FATURANIZI YÜKLEDİKTEN SONRA HİZMET VERİLECEKTİR.\n\nRESİM YÜKLEME LİNKİ:\n{}",
+        upper_name, upload_link
+    )
+}
+
+pub fn build_tv_kurulum_sms_message(customer_name: &str, upload_link: &str) -> String {
+    let upper_name = customer_name.to_uppercase();
+    format!(
+        "SN : {}\nTV KURULUM KAYDI ALINDI.\nFATURA: {}\nFATURA YUKLENMEDEN HIZMET VERILMEZ.",
+        upper_name, upload_link
+    )
+}
+
+pub fn build_robot_kurulum_sms_message(customer_name: &str, upload_link: &str) -> String {
+    let upper_name = customer_name.to_uppercase();
+    format!(
+        "SN : {}\nROBOT KURULUM KAYDI ALINDI.\nFATURA: {}\nFATURA YUKLENMEDEN HIZMET VERILMEZ.",
+        upper_name, upload_link
+    )
+}
+
+pub fn build_montaj_ariza_sms_message(customer_name: &str, device_model: &str) -> String {
+    let upper_name = customer_name.to_uppercase();
+    let upper_model = device_model.to_uppercase();
+    format!(
+        "SN : {}\n{} CIHAZININ INCELENMEK UZERE ATOLYEMIZE KABUL EDILMISTIR.\nTEKNIK ELEKTRONIK 04162161262",
+        upper_name, upper_model
+    )
+}
+
 pub fn build_status_sms_message(status_id: i32, customer_name: &str, device_model: &str) -> Option<String> {
     let upper_name = customer_name.to_uppercase();
     let upper_model = device_model.to_uppercase();
