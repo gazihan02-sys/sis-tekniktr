@@ -2810,6 +2810,7 @@ function CihazKurulum() {
               <div key={item.id || index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                 <div className="grid grid-cols-1 gap-2 mb-3">
                   <p className="text-sm text-gray-800"><span className="font-semibold">Ad Soyad:</span> {item.ad_soyad || '-'}</p>
+                  <p className="text-sm text-gray-700"><span className="font-semibold">RNU İş Emri:</span> {item.rnu_is_emri_no || '-'}</p>
                   <p className="text-sm text-gray-700"><span className="font-semibold">Telefon:</span> {item.telefon || '-'}</p>
                   <p className="text-sm text-gray-700"><span className="font-semibold">Adres:</span> {item.adres || '-'}</p>
                   <div className="text-sm text-gray-700">
@@ -2873,6 +2874,9 @@ function CihazKurulum() {
 
             <p className="text-sm text-gray-700 mb-3">
               <span className="font-semibold">Kişi:</span> {selectedMontaj.ad_soyad || '-'}
+            </p>
+            <p className="text-sm text-gray-700 mb-3">
+              <span className="font-semibold">RNU İş Emri:</span> {selectedMontaj.rnu_is_emri_no || '-'}
             </p>
 
             <div className="mb-4">
