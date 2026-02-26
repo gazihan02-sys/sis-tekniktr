@@ -47,3 +47,11 @@ Tüm sistemi kontrol etmek için:
 ```bash
 cargo check --workspace
 ```
+
+## 🐘 PostgreSQL Geçiş Araçları
+
+MongoDB'den PostgreSQL'e veri taşıma araçları `backend/postgresql/` altında hazırdır.
+
+- Şema: `backend/postgresql/schema.sql`
+- ETL Script: `backend/postgresql/import_from_mongodb.py`
+- Kullanım: `backend/postgresql/README.md`

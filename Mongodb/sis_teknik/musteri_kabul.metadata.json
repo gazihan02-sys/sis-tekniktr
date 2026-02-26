@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"status":{"$numberInt":"1"},"_id":{"$numberInt":"-1"}},"name":"idx_musteri_status_id_desc"}],"uuid":"8392992b8019452ebe7ddebf37e6aff8","collectionName":"musteri_kabul","type":"collection"}

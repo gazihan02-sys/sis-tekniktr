@@ -4,40 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tamir Fişi</title>
-    <link rel="stylesheet" href="/repair-slip.css" />
-    <link rel="stylesheet" href="/repair-slip-print.css" media="print" />
-  </head>
-  <body class="repair-slip-body">
-    <div class="repair-slip-page">
-      <div class="repair-slip-toolbar">
-        <button class="repair-slip-print-btn" onclick="window.print()">Yazdır</button>
-      </div>
+    <style>
+      @page {
+        size: 58mm 40mm;
+        margin: 0;
+      }
 
-      <div class="repair-slip" id="slipRoot">
-        <div class="repair-slip-content">
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-ad_soyad">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-telefon">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-model">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value repair-slip-fault" id="val-ariza">-</div></div>
-        </div>
-          <div class="repair-slip-footer" id="val-tarih">-</div>
-      </div>
-    </div>
+      html,
+      body {
+        width: 58mm;
+        height: 40mm;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <pre id="slipTxt" style="box-sizing:border-box;width:58mm;height:40mm;margin:0;padding:2mm;white-space:pre-wrap;overflow:hidden;">Yükleniyor...</pre>
 
     <script>
       const params = new URLSearchParams(window.location.search);
-      const setText = (id, key) => {
-        const el = document.getElementById(id);
-        if (!el) return;
+      const getVal = (key) => {
         const value = params.get(key);
-        el.textContent = value && value.trim() ? value : '-';
+        return value && value.trim() ? value.trim() : '-';
       };
 
-      setText('val-ad_soyad', 'ad_soyad');
-      setText('val-telefon', 'telefon');
-      setText('val-model', 'model');
-      setText('val-ariza', 'ariza');
-      setText('val-tarih', 'tarih');
+      const content = [
+        `ISIM: ${getVal('ad_soyad')}`,
+        `TELEFON: ${getVal('telefon')}`,
+        `MODEL: ${getVal('model')}`,
+        `ARIZA: ${getVal('ariza')}`,
+      ].join('\n');
+
+      document.getElementById('slipTxt').textContent = content;
     </script>
   </body>
 </html>

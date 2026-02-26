@@ -1,34 +1,8 @@
-use serde::{Deserialize, Serialize, Deserializer};
-use mongodb::bson::oid::ObjectId;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
 use crate::crypto::decrypt_value;
 
-// Custom deserializer for DateTime fields that handles BSON DateTime
-fn deserialize_datetime<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    use serde::de::Error;
-    use serde_json::Value;
-
-    let val: Value = Value::deserialize(deserializer)?;
-    
-    match val {
-        Value::String(s) => {
-            // Try parsing as RFC3339 string
-            DateTime::parse_from_rfc3339(&s)
-                .map(|dt| dt.with_timezone(&Utc))
-                .map_err(Error::custom)
-        }
-        _ => {
-            // For other types (like BSON datetime), default to current time
-            // In practice, this shouldn't happen if we store as RFC3339 strings
-            Ok(Utc::now())
-        }
-    }
-}
-
-// Status ID to String mapping
 pub fn status_id_to_string(id: i32) -> Option<String> {
     match id {
         1 => Some("MÜŞTERI_KABUL".to_string()),
@@ -44,7 +18,6 @@ pub fn status_id_to_string(id: i32) -> Option<String> {
     }
 }
 
-// Status String to ID mapping
 pub fn status_string_to_id(status: &str) -> Option<i32> {
     match status {
         "MÜŞTERI_KABUL" => Some(1),
@@ -78,8 +51,7 @@ pub fn status_id_aliases(id: i32) -> Option<Vec<&'static str>> {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub struct MusteriKabul {
-    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-    pub id: Option<ObjectId>,
+    pub id: Option<String>,
     pub ad_soyad: String,
     pub telefon: String,
     pub marka_model: String,
@@ -94,12 +66,11 @@ pub struct MusteriKabul {
     pub belge_g: Option<String>,
     pub belge_u: Option<String>,
     pub belge_a: Option<String>,
-    pub status: String, // teknisyene_verildi, vs
+    pub status: String,
+    pub fiyat_verilecek: bool,
     pub sms_gonderildi: bool,
     pub sms_mesaj: Option<String>,
-    #[serde(deserialize_with = "deserialize_datetime")]
     pub created_at: DateTime<Utc>,
-    #[serde(deserialize_with = "deserialize_datetime")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -115,6 +86,7 @@ pub struct CreateMusteriKabulRequest {
     pub teknisyen_aciklamasi: Option<String>,
     pub tamir_fisi_no: Option<String>,
     pub status: Option<i32>,
+    pub fiyat_verilecek: Option<bool>,
     pub belge_f: Option<String>,
     pub belge_g: Option<String>,
     pub belge_u: Option<String>,
@@ -132,6 +104,7 @@ pub struct UpdateMusteriKabulRequest {
     pub teknisyen_aciklamasi: Option<String>,
     pub tamir_fisi_no: Option<String>,
     pub status: Option<i32>,
+    pub fiyat_verilecek: Option<bool>,
     pub belge_f: Option<String>,
     pub belge_g: Option<String>,
     pub belge_u: Option<String>,
@@ -155,6 +128,7 @@ pub struct MusteriKabulResponse {
     pub belge_u: Option<String>,
     pub belge_a: Option<String>,
     pub status: String,
+    pub fiyat_verilecek: bool,
     pub sms_gonderildi: bool,
     pub created_at: String,
 }
@@ -181,6 +155,7 @@ impl MusteriKabul {
             belge_u: req.belge_u,
             belge_a: req.belge_a,
             status: status_string,
+            fiyat_verilecek: req.fiyat_verilecek.unwrap_or(false),
             sms_gonderildi: false,
             sms_mesaj: None,
             created_at: now,
@@ -190,9 +165,9 @@ impl MusteriKabul {
 
     pub fn to_response(self) -> MusteriKabulResponse {
         let decrypted_phone = decrypt_value(&self.telefon).unwrap_or_else(|_| self.telefon.clone());
-        
+
         MusteriKabulResponse {
-            id: self.id.map(|id| id.to_hex()).unwrap_or_default(),
+            id: self.id.unwrap_or_default(),
             ad_soyad: self.ad_soyad,
             telefon: decrypted_phone,
             marka_model: self.marka_model,
@@ -207,6 +182,7 @@ impl MusteriKabul {
             belge_u: self.belge_u,
             belge_a: self.belge_a,
             status: self.status,
+            fiyat_verilecek: self.fiyat_verilecek,
             sms_gonderildi: self.sms_gonderildi,
             created_at: self.created_at.to_rfc3339(),
         }

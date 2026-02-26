@@ -11,9 +11,9 @@ ExecStart=/opt/sis-teknik/backend/target/release/api
 Restart=always
 RestartSec=3
 Environment=API_PORT=3000
-Environment=MONGODB_URI=mongodb://127.0.0.1:27017
-Environment=MONGODB_DATABASE=sis_teknik
+Environment=DATABASE_URL=postgresql://sis_teknik_app:SisTeknikApp_2026!Pg@127.0.0.1:5432/sis_teknik
 Environment=FRONTEND_URL=https://tamir.sis-teknik.com.tr
+Environment=TURNSTILE_SECRET_KEY=0x4AAAAAAChToBHieN0cwGcSSMhurhQHm64
 
 [Install]
 WantedBy=multi-user.target

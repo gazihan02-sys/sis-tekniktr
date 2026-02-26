@@ -15,8 +15,7 @@ sudo REPO_URL="https://github.com/gazihan02-sys/siste.git" \
 	BRANCH="main" \
 	APP_DIR="/opt/sis-teknik" \
 	API_PORT="3000" \
-	MONGODB_URI="mongodb://127.0.0.1:27017" \
-	MONGODB_DATABASE="sis_teknik" \
+	DATABASE_URL="postgresql://sis_teknik_app:SisTeknikApp_2026!Pg@127.0.0.1:5432/sis_teknik" \
 	FRONTEND_URL="https://tamir.sis-teknik.com.tr" \
 	./install_and_start.sh
 ```

@@ -9,8 +9,154 @@ const ThemeContext = createContext();
 const useTheme = () => useContext(ThemeContext);
 const DATA_REFRESH_EVENT = 'sis:data-refresh';
 
+let toastDispatcher = null;
+
+const inferToastType = (message) => {
+  const text = String(message || '').trim();
+  if (text.startsWith('❌') || /^hata[:\s]/i.test(text) || /başarısız|yüklenemedi|oluştu/i.test(text)) {
+    return 'error';
+  }
+  if (text.startsWith('✅') || /başarı|güncellendi|yüklendi/i.test(text)) {
+    return 'success';
+  }
+  if (text.startsWith('⚠️') || /uyarı|dikkat|taşınamadı/i.test(text)) {
+    return 'warning';
+  }
+  return 'info';
+};
+
+const showToast = (message, type) => {
+  if (typeof toastDispatcher !== 'function') {
+    console.log(message);
+    return;
+  }
+  toastDispatcher(String(message || ''), type || inferToastType(message));
+};
+
+const BELGE_PLACEHOLDER = '__HAS_BELGE__';
+
+const TURKISH_CHAR_MAP = {
+  ç: 'c', Ç: 'c',
+  ğ: 'g', Ğ: 'g',
+  ı: 'i', İ: 'i',
+  ö: 'o', Ö: 'o',
+  ş: 's', Ş: 's',
+  ü: 'u', Ü: 'u',
+};
+
+const normalizeFilenamePart = (value) => {
+  const raw = String(value || 'dosya');
+  const replaced = raw
+    .split('')
+    .map((char) => TURKISH_CHAR_MAP[char] ?? char)
+    .join('')
+    .toLowerCase();
+
+  const normalized = replaced
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalized || 'dosya';
+};
+
+const loadImageElement = (src) => new Promise((resolve, reject) => {
+  const img = new Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => reject(new Error('Resim yüklenemedi'));
+  img.src = src;
+});
+
+const canvasToJpegBlob = (canvas, quality) => new Promise((resolve) => {
+  canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+});
+
+const compressImageUnderLimit = async (imageSrc, maxBytes = 300 * 1024) => {
+  const image = await loadImageElement(imageSrc);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+
+  let bestBlob = null;
+  const scales = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+
+  for (const scale of scales) {
+    canvas.width = Math.max(1, Math.floor(image.width * scale));
+    canvas.height = Math.max(1, Math.floor(image.height * scale));
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15, 0.1]) {
+      const blob = await canvasToJpegBlob(canvas, quality);
+      if (!blob) continue;
+
+      if (!bestBlob || blob.size < bestBlob.size) {
+        bestBlob = blob;
+      }
+
+      if (blob.size <= maxBytes) {
+        return blob;
+      }
+    }
+  }
+
+  if (!bestBlob || bestBlob.size > maxBytes) {
+    throw new Error('Resim 300KB altına düşürülemedi');
+  }
+
+  return bestBlob;
+};
+
+const downloadBelgeAsCompressedJpg = async (selectedBelgeData) => {
+  const typeMap = { F: 'fatura', G: 'garanti', Ü: 'uretim', A: 'ariza' };
+  const namePart = normalizeFilenamePart(selectedBelgeData?.adi || 'musteri');
+  const typePart = normalizeFilenamePart(typeMap[selectedBelgeData?.type] || 'belge');
+  const filename = `${namePart}_${typePart}.jpg`;
+
+  const blob = await compressImageUnderLimit(selectedBelgeData?.imageData, 300 * 1024);
+  if (!blob) {
+    throw new Error('Resim sıkıştırılamadı');
+  }
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
+
 const triggerDataRefresh = () => {
   window.dispatchEvent(new Event(DATA_REFRESH_EVENT));
+};
+
+const confirmMathDelete = () => {
+  const operators = ['+', '-'];
+  const operator = operators[Math.floor(Math.random() * operators.length)];
+  let a = Math.floor(Math.random() * 41) + 10;
+  let b = Math.floor(Math.random() * 31) + 1;
+
+  if (operator === '-' && b > a) {
+    const tmp = a;
+    a = b;
+    b = tmp;
+  }
+
+  const expected = operator === '+' ? a + b : a - b;
+  const input = window.prompt(`Silme onayı için işlemi çöz: ${a} ${operator} ${b} = ?`);
+
+  if (input === null) {
+    return false;
+  }
+
+  const answer = Number(String(input).trim());
+  if (!Number.isFinite(answer) || answer !== expected) {
+    window.alert('Matematik cevabı yanlış. Silme iptal edildi.');
+    return false;
+  }
+
+  return true;
 };
 
 const isSameData = (a, b) => {
@@ -410,10 +556,13 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
   const [isBulkMoving, setIsBulkMoving] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const statusListCacheRef = useRef(null);
   const hasLoadedOnceRef = useRef(false);
+  const pageSize = 10;
   const [editForm, setEditForm] = useState({
     ad_soyad: '',
     telefon: '',
@@ -439,6 +588,11 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
 
   const getStatusLabel = (statusId) => statusMap[statusId] || `Status ${statusId}`;
   const allVisibleSelected = statusList.length > 0 && selectedIds.length === statusList.length;
+  const pageButtons = [
+    currentPage > 1 ? currentPage - 1 : null,
+    currentPage,
+    hasNextPage ? currentPage + 1 : null,
+  ].filter((value, index, arr) => value !== null && arr.indexOf(value) === index);
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
@@ -522,6 +676,10 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
       return;
     }
 
+    if (!confirmMathDelete()) {
+      return;
+    }
+
     setIsBulkDeleting(true);
 
     let deletedCount = 0;
@@ -576,6 +734,31 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
     navigate(`/edit/${item.id}`);
   };
 
+  const handleBelgePreview = async (item, letter, field) => {
+    if (!item[field]) {
+      setSelectedBelgeData({ imageData: null, type: letter, adi: item.ad_soyad, customerId: item.id });
+      setShowBelgeModal(true);
+      return;
+    }
+
+    let imageData = item[field];
+
+    if (imageData === BELGE_PLACEHOLDER) {
+      try {
+        const response = await fetch(`/api/musteri-kabul/${item.id}`);
+        if (response.ok) {
+          const detail = await response.json();
+          imageData = detail?.[field] || null;
+        }
+      } catch (error) {
+        console.error('Belge detay fetch error:', error);
+      }
+    }
+
+    setSelectedBelgeData({ imageData, type: letter, adi: item.ad_soyad, customerId: item.id });
+    setShowBelgeModal(true);
+  };
+
   const fetchStatusList = async () => {
     if (!hasLoadedOnceRef.current) {
       setIsLoading(true);
@@ -583,9 +766,10 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
 
     let hasChanged = false;
     try {
-      const response = await fetch(`/api/musteri-kabul/by-status/${status}`);
+      const response = await fetch(`/api/musteri-kabul/by-status/${status}?page=${currentPage}&page_size=${pageSize}`);
       const data = await response.json();
       const normalizedData = Array.isArray(data) ? data : [];
+      setHasNextPage(normalizedData.length === pageSize);
       if (!isSameData(statusListCacheRef.current, normalizedData)) {
         statusListCacheRef.current = normalizedData;
         setStatusList(normalizedData);
@@ -646,6 +830,10 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
       return;
     }
 
+    if (!confirmMathDelete()) {
+      return;
+    }
+
     try {
       console.log('DELETE isteği gönderiliyor:', id);
       const response = await fetch(`/api/musteri-kabul/${id}`, {
@@ -699,7 +887,7 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
   
   useEffect(() => {
     fetchStatusList();
-  }, [status]);
+  }, [status, currentPage]);
 
   useEffect(() => {
     setSelectedIds((prev) => prev.filter((id) => statusList.some((item) => item.id === id)));
@@ -709,9 +897,10 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
     setSelectedIds([]);
     setTargetStatusId('');
     setShowBulkActions(false);
+    setCurrentPage(1);
   }, [status]);
 
-  useDataRefreshListener(fetchStatusList, [status]);
+  useDataRefreshListener(fetchStatusList, [status, currentPage]);
   
   return (
     <div className="p-4">
@@ -763,7 +952,14 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium">{item.ad_soyad}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="font-medium">{item.ad_soyad}</div>
+                        {item.fiyat_verilecek && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 animate-pulse">
+                            Fiyat Verilecek
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {new Date(item.created_at).toLocaleDateString('tr-TR')} {new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                       </div>
@@ -774,10 +970,7 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
                       <div className="flex gap-2">
                         {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([letter, field]) => {
                           const hasBelge = item[field] ? true : false;
-                          const handleBelgeClick = () => {
-                            setSelectedBelgeData({ imageData: item[field] || null, type: letter, adi: item.ad_soyad, customerId: item.id });
-                            setShowBelgeModal(true);
-                          };
+                          const handleBelgeClick = () => handleBelgePreview(item, letter, field);
                           return (
                             <div 
                               key={letter}
@@ -820,7 +1013,14 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
               <div key={item.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
-                  <h3 className="font-semibold text-gray-900">{item.ad_soyad}</h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-gray-900">{item.ad_soyad}</h3>
+                    {item.fiyat_verilecek && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 animate-pulse">
+                        Fiyat Verilecek
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
                     {new Date(item.created_at).toLocaleDateString('tr-TR')} {new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -849,10 +1049,7 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
                   <div className="flex gap-2 justify-center">
                     {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([letter, field]) => {
                       const hasBelge = item[field] ? true : false;
-                      const handleBelgeClick = () => {
-                        setSelectedBelgeData({ imageData: item[field] || null, type: letter, adi: item.ad_soyad, customerId: item.id });
-                        setShowBelgeModal(true);
-                      };
+                      const handleBelgeClick = () => handleBelgePreview(item, letter, field);
                       return (
                         <div 
                           key={letter}
@@ -889,7 +1086,7 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
           </div>
 
           {/* Toplu İşlemler - Bottom */}
-          <div className="mb-4 flex items-center gap-1 md:gap-3 overflow-hidden">
+          <div className="mb-4 flex flex-col items-start gap-2 overflow-hidden">
             <button
               type="button"
               onClick={() => setShowBulkActions((prev) => !prev)}
@@ -899,7 +1096,7 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
             </button>
 
             <div
-              className={`flex-1 min-w-0 transition-all duration-300 ease-out transform bg-white border border-gray-200 rounded-lg p-3 ${showBulkActions ? 'opacity-100 translate-x-0 max-w-[1400px]' : 'opacity-0 translate-x-8 max-w-0 pointer-events-none'}`}
+              className={`w-full transition-all duration-300 ease-out transform origin-top bg-white border border-gray-200 rounded-lg p-3 ${showBulkActions ? 'opacity-100 translate-y-0 max-h-96' : 'opacity-0 -translate-y-1 max-h-0 p-0 border-transparent pointer-events-none'}`}
             >
               <div className="flex flex-col md:flex-row md:items-center gap-3">
                 <div className="text-sm font-medium text-gray-700">
@@ -943,6 +1140,42 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
                   {isBulkDeleting ? 'Siliniyor...' : 'Toplu Sil'}
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="text-xs text-gray-600">Sayfa {currentPage}</div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Önceki
+              </button>
+              {pageButtons.map((pageNo) => {
+                const isActive = pageNo === currentPage;
+                return (
+                  <button
+                    key={pageNo}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNo)}
+                    className={`w-9 h-9 text-sm border rounded-lg transition ${isActive ? 'text-white' : 'border-gray-300 hover:bg-gray-50 text-gray-700'}`}
+                    style={isActive ? { backgroundColor: themeColor, borderColor: themeColor } : undefined}
+                  >
+                    {pageNo}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={!hasNextPage}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sonraki
+              </button>
             </div>
           </div>
         </>
@@ -1413,14 +1646,13 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
                </button>
                {selectedBelgeData.imageData && (
                  <button
-                   onClick={() => {
-                     const link = document.createElement('a');
-                     link.href = selectedBelgeData.imageData;
-                     link.download = `${selectedBelgeData.adi}_${selectedBelgeData.type}_Belgesi.jpg`;
-                     document.body.appendChild(link);
-                     link.click();
-                     document.body.removeChild(link);
-                   }}
+                  onClick={async () => {
+                    try {
+                      await downloadBelgeAsCompressedJpg(selectedBelgeData);
+                    } catch (error) {
+                      showToast(error?.message || 'İndirme hatası', 'error');
+                    }
+                  }}
                    className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition"
                    style={{ backgroundColor: themeColor }}
                  >
@@ -1453,6 +1685,9 @@ function MontajEkle() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editMontajId, setEditMontajId] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploadingEditFatura, setIsUploadingEditFatura] = useState(false);
+  const [editFaturaFile, setEditFaturaFile] = useState(null);
+  const [editHasFatura, setEditHasFatura] = useState(false);
   const [editForm, setEditForm] = useState({
     rnuIsEmriNo: '',
     adSoyad: '',
@@ -1460,8 +1695,30 @@ function MontajEkle() {
     model: '',
     adres: '',
     servisTipi: '',
-    atananKullaniciUsername: '',
+    atananKullaniciUsernames: [],
   });
+
+  const parseAssignedUsernames = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return [];
+
+    return raw
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item, index, arr) => item && arr.indexOf(item) === index);
+  };
+
+  const formatAssignedUsers = (value) => {
+    const usernames = parseAssignedUsernames(value);
+    if (!usernames.length) return '-';
+
+    return usernames
+      .map((username) => {
+        const found = level3Users.find((user) => String(user?.username || '').toLowerCase() === username);
+        return found?.ad_soyad || found?.username || username;
+      })
+      .join(', ');
+  };
 
   const normalizePhone = (value) => {
     const cleaned = String(value || '').trim();
@@ -1471,6 +1728,8 @@ function MontajEkle() {
 
   const openEditModal = (item) => {
     setEditMontajId(item.id || '');
+    setEditFaturaFile(null);
+    setEditHasFatura(Boolean(item.belge_f));
     setEditForm({
       rnuIsEmriNo: item.rnu_is_emri_no || '',
       adSoyad: item.ad_soyad || '',
@@ -1478,13 +1737,18 @@ function MontajEkle() {
       model: item.model || '',
       adres: item.adres || '',
       servisTipi: item.servis_tipi || '',
-      atananKullaniciUsername: item.atanan_kullanici_username || '',
+      atananKullaniciUsernames: parseAssignedUsernames(item.atanan_kullanici_username),
     });
     setShowEditModal(true);
   };
 
   const handleEditMontaj = async (e) => {
     e.preventDefault();
+
+    if (!editMontajId) {
+      alert('Güncellenecek kayıt bulunamadı.');
+      return;
+    }
 
     const normalizedPhone = normalizePhone(editForm.telefon);
 
@@ -1495,6 +1759,18 @@ function MontajEkle() {
 
     setIsUpdating(true);
     try {
+      let belgeF = undefined;
+      if (editFaturaFile) {
+        belgeF = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Fatura dosyası okunamadı'));
+          reader.readAsDataURL(editFaturaFile);
+        });
+      }
+
+      const normalizedAssignedUsernames = editForm.atananKullaniciUsernames.join(',');
+
       const response = await fetch(`/api/montaj/${editMontajId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1505,7 +1781,8 @@ function MontajEkle() {
           model: editForm.model,
           adres: editForm.adres,
           servis_tipi: editForm.servisTipi,
-          atanan_kullanici_username: editForm.atananKullaniciUsername,
+          atanan_kullanici_username: normalizedAssignedUsernames,
+          belge_f: belgeF,
         }),
       });
 
@@ -1514,20 +1791,79 @@ function MontajEkle() {
         throw new Error(errText || 'Güncelleme başarısız');
       }
 
-      await fetchMontajList();
+      setMontajList((prev) => prev.map((item) => {
+        if (item.id !== editMontajId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          rnu_is_emri_no: editForm.rnuIsEmriNo?.trim() || '',
+          ad_soyad: editForm.adSoyad?.trim() || '',
+          telefon: normalizedPhone,
+          model: editForm.model?.trim() || '',
+          adres: editForm.adres?.trim() || '',
+          servis_tipi: editForm.servisTipi?.trim() || '',
+          atanan_kullanici_username: normalizedAssignedUsernames,
+          belge_f: belgeF ? true : item.belge_f,
+        };
+      }));
+
+      fetchMontajList();
       setShowEditModal(false);
       setEditMontajId('');
+      setEditFaturaFile(null);
+      setEditHasFatura(false);
     } catch (error) {
       console.error('Montaj update error:', error);
-      alert('Kayıt güncellenemedi.');
+      alert(`Kayıt güncellenemedi: ${error.message}`);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleEditFaturaInstantUpload = async (file) => {
+    if (!file || !editMontajId) {
+      return;
+    }
+
+    setIsUploadingEditFatura(true);
+    try {
+      const belgeF = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Fatura dosyası okunamadı'));
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch(`/api/montaj/${editMontajId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ belge_f: belgeF }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Fatura yükleme başarısız');
+      }
+
+      setEditHasFatura(true);
+      setEditFaturaFile(null);
+      await fetchMontajList();
+      alert('✅ Fatura anlık yüklendi.');
+    } catch (error) {
+      console.error('Montaj fatura upload error:', error);
+      alert('❌ Fatura yüklenemedi.');
+    } finally {
+      setIsUploadingEditFatura(false);
     }
   };
 
   const handleDeleteMontaj = async (id) => {
     const confirmed = confirm('Bu montaj kaydını silmek istediğinizden emin misiniz?');
     if (!confirmed) return;
+
+    if (!confirmMathDelete()) return;
 
     try {
       const response = await fetch(`/api/montaj/${id}`, {
@@ -1549,6 +1885,52 @@ function MontajEkle() {
   const handleDownloadMontajZip = (id) => {
     if (!id) return;
     window.open(`/api/montaj/${id}/download-zip`, '_blank');
+  };
+
+  const handleOpenMontajFatura = async (id) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`/api/montaj/${id}`);
+      if (!response.ok) {
+        throw new Error('Fatura bilgisi alınamadı');
+      }
+
+      const detail = await response.json();
+      const fatura = detail?.belge_f;
+
+      if (!fatura) {
+        alert('Bu kayıtta fatura bulunamadı.');
+        return;
+      }
+
+      if (typeof fatura === 'string' && fatura.startsWith('data:')) {
+        if (fatura.startsWith('data:image/')) {
+          const popup = window.open('', '_blank');
+          if (!popup) {
+            alert('Fatura penceresi açılamadı. Popup engelini kaldırın.');
+            return;
+          }
+
+          popup.document.write(`
+            <html>
+              <head><title>Fatura</title></head>
+              <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#111;">
+                <img src="${fatura}" alt="Fatura" style="max-width:100%;max-height:100vh;" />
+              </body>
+            </html>
+          `);
+          popup.document.close();
+        } else {
+          window.open(fatura, '_blank');
+        }
+      } else {
+        window.open(fatura, '_blank');
+      }
+    } catch (error) {
+      console.error('Fatura açma hatası:', error);
+      alert('Fatura açılamadı.');
+    }
   };
 
   const closeActionMenu = () => {
@@ -1610,6 +1992,11 @@ function MontajEkle() {
     fetchLevel3Users();
   }, []);
 
+  useDataRefreshListener(() => {
+    fetchMontajList();
+    fetchLevel3Users();
+  }, []);
+
   return (
     <div className="p-4">
        <div className="grid grid-cols-1 gap-6 mb-6">
@@ -1666,9 +2053,22 @@ function MontajEkle() {
                          </div>
                        </td>
                        <td className="px-6 py-4">{item.telefon || '-'}</td>
-                       <td className="px-6 py-4">{item.model || '-'}</td>
+                      <td className="px-6 py-4">
+                        {item.belge_f ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMontajFatura(item.id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+                            title="Fatura yüklü - Aç"
+                          >
+                            {item.model || '-'}
+                          </button>
+                        ) : (
+                          <span>{item.model || '-'}</span>
+                        )}
+                      </td>
                        <td className="px-6 py-4">{item.servis_tipi || '-'}</td>
-                       <td className="px-6 py-4">{item.atanan_kullanici_username || '-'}</td>
+                       <td className="px-6 py-4">{formatAssignedUsers(item.atanan_kullanici_username)}</td>
                        <td className="px-6 py-4">
                          {item.created_at ? new Date(item.created_at).toLocaleString('tr-TR') : '-'}
                        </td>
@@ -1712,9 +2112,20 @@ function MontajEkle() {
                        <span className="text-gray-600">Telefon:</span>
                        <span className="font-medium">{item.telefon || '-'}</span>
                      </div>
-                     <div className="flex justify-between text-sm">
+                     <div className="flex justify-between text-sm items-center gap-2">
                        <span className="text-gray-600">Model:</span>
-                       <span className="font-medium">{item.model || '-'}</span>
+                       {item.belge_f ? (
+                         <button
+                           type="button"
+                           onClick={() => handleOpenMontajFatura(item.id)}
+                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+                           title="Fatura yüklü - Aç"
+                         >
+                           {item.model || '-'}
+                         </button>
+                       ) : (
+                         <span className="font-medium">{item.model || '-'}</span>
+                       )}
                      </div>
                      <div className="flex justify-between text-sm">
                        <span className="text-gray-600">Servis Tipi:</span>
@@ -1722,7 +2133,7 @@ function MontajEkle() {
                      </div>
                      <div className="flex justify-between text-sm">
                        <span className="text-gray-600">Atanan:</span>
-                       <span className="font-medium">{item.atanan_kullanici_username || '-'}</span>
+                       <span className="font-medium">{formatAssignedUsers(item.atanan_kullanici_username)}</span>
                      </div>
                    </div>
 
@@ -1797,7 +2208,7 @@ function MontajEkle() {
 
        {showEditModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-           <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-6xl rounded-xl shadow-xl border border-gray-200 max-h-[90vh] overflow-y-auto">
              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                <h3 className="text-lg font-semibold text-gray-900">Montaj Kaydı Düzenle</h3>
                <button
@@ -1838,6 +2249,54 @@ function MontajEkle() {
                    onChange={(e) => setEditForm((prev) => ({ ...prev, model: e.target.value }))}
                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"
                  />
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Fatura (Opsiyonel)</label>
+                 <input
+                   type="file"
+                   accept="image/*,.pdf,application/pdf"
+                  disabled={isUploadingEditFatura}
+                  onChange={async (e) => {
+                     const file = e.target.files?.[0] || null;
+                     if (!file) {
+                       setEditFaturaFile(null);
+                       return;
+                     }
+
+                     const isImage = file.type.startsWith('image/');
+                     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+                     if (!isImage && !isPdf) {
+                       alert('Lütfen resim veya PDF dosyası seçin.');
+                       e.target.value = '';
+                       setEditFaturaFile(null);
+                       return;
+                     }
+
+                     setEditFaturaFile(file);
+                    await handleEditFaturaInstantUpload(file);
+                    e.target.value = '';
+                   }}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"
+                 />
+                 <p className="mt-1 text-xs text-gray-500">
+                  {isUploadingEditFatura
+                    ? 'Fatura yükleniyor...'
+                    : editFaturaFile
+                     ? `Seçilen dosya: ${editFaturaFile.name}`
+                     : editHasFatura
+                       ? 'Bu kayıtta mevcut fatura var. Yeni dosya seçerseniz üzerine yazılır.'
+                       : 'Henüz fatura yüklenmemiş.'}
+                 </p>
+                 {editHasFatura && !editFaturaFile && (
+                   <button
+                     type="button"
+                     onClick={() => handleOpenMontajFatura(editMontajId)}
+                     className="mt-2 inline-flex items-center px-3 py-1.5 text-xs rounded border border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+                   >
+                     Mevcut faturayı aç
+                   </button>
+                 )}
                </div>
 
                <div>
@@ -1896,22 +2355,52 @@ function MontajEkle() {
 
                <div className="md:col-span-2">
                  <label className="block text-sm font-medium text-gray-700 mb-1">Atama (Level3)</label>
-                 <select
-                   value={editForm.atananKullaniciUsername}
-                   onChange={(e) => setEditForm((prev) => ({ ...prev, atananKullaniciUsername: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"
-                 >
-                   <option value="">Atama yok</option>
-                   {level3Users.map((user) => (
-                     <option key={user.id || user.username} value={user.username}>{user.ad_soyad || user.username}</option>
-                   ))}
-                 </select>
+                 <div className="w-full border border-gray-300 rounded-lg p-3 space-y-2 max-h-44 overflow-y-auto">
+                   {level3Users.length === 0 ? (
+                     <p className="text-sm text-gray-500">Atanabilir kullanıcı bulunamadı.</p>
+                   ) : (
+                     level3Users.map((user) => {
+                       const username = String(user.username || '').toLowerCase();
+                       const checked = editForm.atananKullaniciUsernames.includes(username);
+
+                       return (
+                         <label key={user.id || user.username} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                           <input
+                             type="checkbox"
+                             checked={checked}
+                             onChange={(e) => {
+                               setEditForm((prev) => {
+                                 const next = new Set(prev.atananKullaniciUsernames);
+                                 if (e.target.checked) {
+                                   next.add(username);
+                                 } else {
+                                   next.delete(username);
+                                 }
+
+                                 return {
+                                   ...prev,
+                                   atananKullaniciUsernames: Array.from(next),
+                                 };
+                               });
+                             }}
+                             className="w-4 h-4"
+                           />
+                           <span>{user.ad_soyad || user.username}</span>
+                         </label>
+                       );
+                     })
+                   )}
+                 </div>
                </div>
 
                <div className="md:col-span-2 flex justify-end gap-2 pt-2">
                  <button
                    type="button"
-                   onClick={() => setShowEditModal(false)}
+                   onClick={() => {
+                     setShowEditModal(false);
+                     setEditFaturaFile(null);
+                     setEditHasFatura(false);
+                   }}
                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
                  >
                    Vazgeç
@@ -1936,6 +2425,7 @@ function MontaEklePage() {
   const { themeColor } = useTheme();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const [montajForm, setMontajForm] = useState({
     rnuIsEmriNo: '',
     adSoyad: '',
@@ -1996,7 +2486,15 @@ function MontaEklePage() {
         throw new Error(errorText || 'Kayıt başarısız');
       }
 
-      window.location.href = 'https://tamir.sis-teknik.com.tr/montaj/ekle';
+      setMontajForm({
+        rnuIsEmriNo: '',
+        adSoyad: '',
+        model: '',
+        telefon: '',
+        adres: '',
+        servisTipi: '',
+      });
+      setSaveMessage('Montaj kaydı başarıyla eklendi.');
     } catch (error) {
       console.error('Montaj kayıt hatası:', error);
       alert(`Kayıt sırasında hata oluştu: ${error.message}`);
@@ -2018,6 +2516,12 @@ function MontaEklePage() {
             close
           </button>
         </div>
+
+        {saveMessage && (
+          <div className="mx-5 mt-5 px-4 py-3 rounded-lg border border-green-300 bg-green-50 text-green-800 text-sm font-medium">
+            {saveMessage}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -2187,8 +2691,12 @@ function CihazKurulum() {
       const data = await response.json();
       const normalizedData = Array.isArray(data) ? data : [];
       setItems(normalizedData.filter((item) => {
-        const assigned = String(item?.atanan_kullanici_username || '').trim().toLowerCase();
-        return !item?.kapatildi && assigned === currentUsername;
+        const assigned = String(item?.atanan_kullanici_username || '')
+          .split(',')
+          .map((part) => part.trim().toLowerCase())
+          .filter((part) => !!part);
+
+        return !item?.kapatildi && assigned.includes(currentUsername);
       }));
     } catch (error) {
       setMessage({ type: 'error', text: 'Sunucu bağlantısı başarısız.' });
@@ -2199,6 +2707,8 @@ function CihazKurulum() {
   useEffect(() => {
     fetchMontaj();
   }, []);
+
+  useDataRefreshListener(fetchMontaj, [currentUsername]);
 
   const toBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2724,6 +3234,7 @@ function Edit() {
     teknisyen_aciklamasi: '',
     tamir_fisi_no: '',
     status: '',
+    fiyat_verilecek: false,
     belge_f: null,
     belge_g: null,
     belge_u: null,
@@ -2748,9 +3259,8 @@ function Edit() {
   const fetchCustomer = async () => {
     let hasChanged = false;
     try {
-      const response = await fetch(`/api/musteri-kabul`);
-      const data = await response.json();
-      const found = data.find(c => c.id === customerId);
+      const response = await fetch(`/api/musteri-kabul/${customerId}`);
+      const found = response.ok ? await response.json() : null;
       if (found) {
         const nextForm = {
           ad_soyad: found.ad_soyad || '',
@@ -2762,6 +3272,7 @@ function Edit() {
           teknisyen_aciklamasi: found.teknisyen_aciklamasi || '',
           tamir_fisi_no: found.tamir_fisi_no || '',
           status: statusStringToId(found.status) || '',
+          fiyat_verilecek: !!found.fiyat_verilecek,
           belge_f: found.belge_f || null,
           belge_g: found.belge_g || null,
           belge_u: found.belge_u || null,
@@ -2845,6 +3356,36 @@ function Edit() {
     }
   };
 
+  const handleFiyatVerilecekChange = async (checked) => {
+    if (!customerId) return;
+
+    const previousValue = !!editForm.fiyat_verilecek;
+    setEditForm((prev) => ({ ...prev, fiyat_verilecek: checked }));
+    setCustomer((prev) => (prev ? { ...prev, fiyat_verilecek: checked } : prev));
+
+    try {
+      const response = await fetch(`/api/musteri-kabul/${customerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fiyat_verilecek: checked })
+      });
+
+      if (!(response.ok || response.status === 204)) {
+        setEditForm((prev) => ({ ...prev, fiyat_verilecek: previousValue }));
+        setCustomer((prev) => (prev ? { ...prev, fiyat_verilecek: previousValue } : prev));
+        const errorText = await response.text();
+        alert(`❌ Fiyat verilecek durumu kaydedilemedi: ${errorText || response.statusText}`);
+        return;
+      }
+
+      triggerDataRefresh();
+    } catch (error) {
+      setEditForm((prev) => ({ ...prev, fiyat_verilecek: previousValue }));
+      setCustomer((prev) => (prev ? { ...prev, fiyat_verilecek: previousValue } : prev));
+      alert('❌ Fiyat verilecek durumu güncellenirken hata oluştu');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-6">
@@ -2894,6 +3435,15 @@ function Edit() {
             >
               {isResendingSms ? 'SMS Gönderiliyor...' : 'SMS Tekrar Gönder'}
             </button>
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 select-none">
+              <input
+                type="checkbox"
+                checked={!!editForm.fiyat_verilecek}
+                onChange={(e) => handleFiyatVerilecekChange(e.target.checked)}
+                className="w-4 h-4"
+              />
+              Fiyat Verilecek
+            </label>
           <div className="flex gap-1.5 md:ml-auto">
             {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([label, fieldName]) => (
               <div
@@ -3122,13 +3672,12 @@ function Edit() {
               </button>
               {selectedBelgeData.imageData && (
                 <button
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = selectedBelgeData.imageData;
-                    link.download = `${selectedBelgeData.adi}_${selectedBelgeData.type}_Belgesi.jpg`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                  onClick={async () => {
+                    try {
+                      await downloadBelgeAsCompressedJpg(selectedBelgeData);
+                    } catch (error) {
+                      showToast(error?.message || 'İndirme hatası', 'error');
+                    }
                   }}
                   className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition"
                   style={{ backgroundColor: themeColor }}
@@ -3162,6 +3711,7 @@ function Ayarlar({ themeColor, setThemeColor, onlyThemeModal = false }) {
   const [editUsername, setEditUsername] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editUserLevel, setEditUserLevel] = useState('level2');
+  const [themeMessage, setThemeMessage] = useState(null);
   const usersCacheRef = useRef(null);
   const usersLoadedOnceRef = useRef(false);
 
@@ -3225,6 +3775,7 @@ function Ayarlar({ themeColor, setThemeColor, onlyThemeModal = false }) {
     setThemeColor(hex);
     localStorage.setItem('themeColor', hex);
     setShowColorModal(false);
+    setThemeMessage({ type: 'success', text: 'Tema rengi güncellendi.' });
 
     const currentUsername = (localStorage.getItem('username') || '').trim().toLowerCase();
     if (!currentUsername) return;
@@ -3247,8 +3798,19 @@ function Ayarlar({ themeColor, setThemeColor, onlyThemeModal = false }) {
       });
     } catch (error) {
       console.error('Theme color save error:', error);
+      setThemeMessage({ type: 'error', text: 'Tema kaydedilirken bağlantı hatası oluştu.' });
     }
   };
+
+  useEffect(() => {
+    if (!themeMessage) return;
+
+    const timer = setTimeout(() => {
+      setThemeMessage(null);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [themeMessage]);
 
   const fetchUsers = async () => {
     if (!usersLoadedOnceRef.current) {
@@ -3401,6 +3963,8 @@ function Ayarlar({ themeColor, setThemeColor, onlyThemeModal = false }) {
 
     const confirmed = window.confirm(`${user.username} kullanıcısı silinsin mi?`);
     if (!confirmed) return;
+
+    if (!confirmMathDelete()) return;
 
     setUserSaving(true);
     setUserMessage(null);
@@ -3714,6 +4278,14 @@ function Ayarlar({ themeColor, setThemeColor, onlyThemeModal = false }) {
         </div>
       )}
 
+      {themeMessage && (
+        <div className="fixed bottom-4 right-4 z-[70]">
+          <div className={`px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${themeMessage.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+            {themeMessage.text}
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
@@ -3884,38 +4456,10 @@ function Layout({ themeColor, setThemeColor }) {
                   {selectedBelgeData.imageData && (
                     <button
                       onClick={async () => {
-                        const typeMap = { 'F': 'Fatura', 'G': 'Garanti', 'Ü': 'Üretim', 'A': 'Arıza' };
-                        const turkceAd = typeMap[selectedBelgeData.type] || 'Belge';
-                        const safeName = (selectedBelgeData.adi || 'Musteri').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-                        const filename = `${safeName}_${turkceAd.toLowerCase()}.jpg`;
-                        
                         try {
-                          const img = new Image();
-                          img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
-                            
-                            canvas.toBlob(
-                              (blob) => {
-                                const link = document.createElement('a');
-                                link.href = URL.createObjectURL(blob);
-                                link.download = filename;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(link.href);
-                              },
-                              'image/jpeg',
-                              0.6
-                            );
-                          };
-                          img.onerror = () => alert('Resim yüklenmesi başarısız');
-                          img.src = selectedBelgeData.imageData;
+                          await downloadBelgeAsCompressedJpg(selectedBelgeData);
                         } catch (error) {
-                          console.error('İndirme hatası:', error);
+                          showToast(error?.message || 'İndirme hatası', 'error');
                         }
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
@@ -3998,73 +4542,70 @@ function App() {
   const [themeColor, setThemeColor] = useState(() => {
     return localStorage.getItem('themeColor') || '#2196F3';
   });
-  const syncFingerprintRef = useRef(null);
+  const [toasts, setToasts] = useState([]);
+
+  const pushToast = (message, type = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== id));
+    }, 3500);
+  };
+
+  useEffect(() => {
+    toastDispatcher = pushToast;
+    const originalAlert = window.alert;
+    window.alert = (message) => {
+      showToast(message);
+    };
+
+    return () => {
+      toastDispatcher = null;
+      window.alert = originalAlert;
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('themeColor', themeColor);
   }, [themeColor]);
 
   useEffect(() => {
-    const currentUsername = (localStorage.getItem('username') || '').trim().toLowerCase();
-    if (!currentUsername) return;
-
-    const loadUserTheme = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (!response.ok) return;
-
-        const users = await response.json();
-        const currentUser = Array.isArray(users)
-          ? users.find((user) => (user?.username || '').toLowerCase() === currentUsername)
-          : null;
-
-        if (currentUser?.theme_color) {
-          setThemeColor(currentUser.theme_color);
-        }
-      } catch (error) {
-        console.error('User theme load error:', error);
-      }
-    };
-
-    loadUserTheme();
-  }, []);
-
-  useEffect(() => {
     let isCancelled = false;
-    let timerId;
+    let reconnectTimer;
+    let socket;
 
-    const runSyncCheck = async () => {
-      try {
-        const response = await fetch('/api/system/sync');
-        if (!response.ok) return;
+    const connectLiveSocket = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const socketUrl = `${protocol}://${window.location.host}/api/live/ws`;
 
-        const payload = await response.json();
-        const nextFingerprint = payload?.fingerprint;
-        if (!nextFingerprint) return;
+      socket = new WebSocket(socketUrl);
 
-        if (!syncFingerprintRef.current) {
-          syncFingerprintRef.current = nextFingerprint;
-          return;
+      socket.onmessage = () => {
+        triggerDataRefresh();
+      };
+
+      socket.onerror = () => {
+        try {
+          socket.close();
+        } catch {
+          // noop
         }
+      };
 
-        if (syncFingerprintRef.current !== nextFingerprint) {
-          syncFingerprintRef.current = nextFingerprint;
-          triggerDataRefresh();
-        }
-      } catch (error) {
-        console.error('System sync check error:', error);
-      } finally {
-        if (!isCancelled) {
-          timerId = setTimeout(runSyncCheck, 7000);
-        }
-      }
+      socket.onclose = () => {
+        if (isCancelled) return;
+        reconnectTimer = setTimeout(connectLiveSocket, 1500);
+      };
     };
 
-    runSyncCheck();
+    connectLiveSocket();
 
     return () => {
       isCancelled = true;
-      if (timerId) clearTimeout(timerId);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        socket.close();
+      }
     };
   }, []);
 
@@ -4073,6 +4614,24 @@ function App() {
       <Router>
         <Layout themeColor={themeColor} setThemeColor={setThemeColor} />
       </Router>
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2 w-[92vw] max-w-md pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all duration-300 ${
+              toast.type === 'success'
+                ? 'bg-green-600'
+                : toast.type === 'error'
+                ? 'bg-red-600'
+                : toast.type === 'warning'
+                ? 'bg-amber-500'
+                : 'bg-gray-800'
+            }`}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
     </ThemeContext.Provider>
   )
 }

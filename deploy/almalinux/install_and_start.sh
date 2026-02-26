@@ -5,8 +5,7 @@ REPO_URL="${REPO_URL:-https://github.com/gazihan02-sys/siste.git}"
 BRANCH="${BRANCH:-main}"
 APP_DIR="${APP_DIR:-/opt/sis-teknik}"
 API_PORT="${API_PORT:-3000}"
-MONGODB_URI="${MONGODB_URI:-mongodb://127.0.0.1:27017}"
-MONGODB_DATABASE="${MONGODB_DATABASE:-sis_teknik}"
+DATABASE_URL="${DATABASE_URL:-postgresql://sis_teknik_app:SisTeknikApp_2026!Pg@127.0.0.1:5432/sis_teknik}"
 FRONTEND_URL="${FRONTEND_URL:-https://tamir.sis-teknik.com.tr}"
 
 if [[ "$(id -u)" -eq 0 ]]; then
@@ -90,8 +89,7 @@ ExecStart=$APP_DIR/backend/target/release/api
 Restart=always
 RestartSec=3
 Environment=API_PORT=$API_PORT
-Environment=MONGODB_URI=$MONGODB_URI
-Environment=MONGODB_DATABASE=$MONGODB_DATABASE
+Environment=DATABASE_URL=$DATABASE_URL
 Environment=FRONTEND_URL=$FRONTEND_URL
 
 [Install]
