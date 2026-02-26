@@ -1,6 +1,6 @@
 date=26.02.2026
 db_file=db_26.02.2026.dump
-db_size_bytes=52079006
+db_size_bytes=52079014
 site_file=site_26.02.2026.tar.gz
 site_size_bytes=286063
 site_sha256=a1a338938f1ed817269b9e98ccfd363d409b44e9049ae35e427d48726601b585
