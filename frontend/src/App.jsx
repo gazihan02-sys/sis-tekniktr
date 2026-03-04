@@ -38,34 +38,57 @@ function useDataRefreshListener(callback, deps = []) {
   }, deps);
 }
 
-// Menu Item Component - Normal menu items
-function MenuItem({ to, iconName, label, children, themeColor, isLogout }) {
+// Menu Item Component - MD3 Style
+function MenuItem({ to, iconName, label, children, themeColor, isLogout, horizontal }) {
   const location = useLocation();
   const isActive = location.pathname.startsWith(to) && to !== '/';
   const [isOpen, setIsOpen] = useState(false);
   
-  const getIconColor = (isActive) => {
-    if (isActive) return 'white';
-    if (isLogout) return '#ef4444';
-    return '#4B5563';
-  };
-  
+  // Horizontal (Top Bar) Item - MD3 Navigation Rail/Bar style adapted for horizontal
+  if (horizontal) {
+    return (
+      <li>
+        <Link 
+          to={to} 
+          className={`
+            relative flex items-center gap-2 px-4 py-0 h-12 rounded-full transition-all duration-200
+            ${isActive ? 'font-bold' : 'font-medium text-gray-600 hover:bg-gray-100'}
+          `}
+          style={isActive ? { 
+            backgroundColor: themeColor, 
+            color: 'white',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
+          } : {}}
+        >
+           {/* Icon Container with subtle active state backing if needed */}
+          <span className="material-icons text-[20px]">
+            {iconName}
+          </span>
+          <span className="text-sm tracking-wide">{label}</span>
+          
+          {/* Active Indicator (Bottom border backup design, but we use Pill for MD3) */}
+        </Link>
+      </li>
+    );
+  }
+
+  // Vertical Layout (Legacy/Mobile Drawer)
   if (children) {
     return (
       <li>
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex flex-col items-center justify-center w-full p-2 rounded-lg group text-center transition`}
-          style={isOpen ? { backgroundColor: themeColor, color: 'white' } : { color: '#4B5563' }}
+          className={`flex flex-col items-center justify-center w-full p-2 rounded-2xl group text-center transition-all duration-200`}
+          style={isOpen ? { backgroundColor: themeColor + '20', color: themeColor } : { color: '#4B5563' }}
         >
-          <span className="material-icons text-xl block mx-auto mb-0.5" style={{ color: getIconColor(isOpen) }}>
+          <span className="material-icons text-xl block mx-auto mb-0.5">
             {iconName}
           </span>
           <span className="whitespace-nowrap font-medium text-xs leading-tight">{label}</span>
-          <span className={`material-icons transition-transform text-xs mt-0.5`} style={{ color: getIconColor(isOpen) }}>chevron_down</span>
+          <span className={`material-icons transition-transform text-xs mt-0.5 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
         </button>
         {isOpen && (
-          <ul className="space-y-1 mt-2 bg-gray-50 rounded-lg p-2">
+          <ul className="space-y-1 mt-2 bg-gray-50 rounded-xl p-2 animate-fadeIn">
             {children}
           </ul>
         )}
@@ -77,10 +100,10 @@ function MenuItem({ to, iconName, label, children, themeColor, isLogout }) {
     <li>
        <Link 
          to={to} 
-         className={`flex flex-col items-center justify-center w-full p-2 rounded-lg group text-center transition`}
-         style={isActive ? { backgroundColor: themeColor, color: 'white' } : { color: '#4B5563' }}
+         className={`flex flex-col items-center justify-center w-full p-2 rounded-2xl group text-center transition-all duration-200 active:scale-95`}
+         style={isActive ? { backgroundColor: themeColor, color: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' } : { color: '#4B5563' }}
        >
-         <span className="material-icons text-xl block mx-auto mb-0.5" style={{ color: getIconColor(isActive) }}>
+         <span className="material-icons text-xl block mx-auto mb-0.5">
            {iconName}
          </span>
           <span className="whitespace-nowrap font-medium text-xs leading-tight">{label}</span>
@@ -299,98 +322,127 @@ function Home() {
   ];
   
   return (
-    <div className="p-4">
+    <div className="pt-2 sm:pt-4">
        {successMessage && (
-         <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded shadow-sm">
-           <div className="flex justify-between items-start">
+         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl shadow-sm flex items-start gap-3">
+             <span className="material-icons text-green-600">check_circle</span>
              <div className="flex-1">
-               <p className="text-green-800 font-bold whitespace-pre-wrap">{successMessage}</p>
+               <p className="text-green-800 font-medium whitespace-pre-wrap">{successMessage}</p>
              </div>
              <button 
                onClick={() => setSuccessMessage(null)}
-               className="text-green-600 hover:text-green-800 ml-4"
+               className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100 transition-colors"
              >
-               ✕
+               <span className="material-icons text-sm">close</span>
              </button>
-           </div>
         </div>
       )}
 
-       {/* Search Bar */}
-       <div className="mb-8">
-         <div className="relative">
-           <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-             <span className="material-icons text-gray-400">search</span>
+       {/* MD3 Search Bar */}
+       <div className="mb-8 max-w-2xl mx-auto">
+         <div className="relative group">
+           <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center pointer-events-none text-gray-500 group-focus-within:text-primary transition-colors">
+              <span className="material-icons">search</span>
            </div>
+           
            <input
              type="text"
              placeholder={searchPlaceholder}
              value={searchText}
              onChange={(e) => setSearchText(e.target.value)}
-             className="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
-             style={{ '--tw-ring-color': themeColor }}
+             className="w-full pl-12 pr-12 py-3.5 bg-gray-100 border-none rounded-full text-base focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all shadow-sm hover:shadow-md focus:shadow-lg"
            />
+           
            {searchText && (
              <button
                onClick={() => setSearchText('')}
-               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+               className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition"
              >
                <span className="material-icons text-lg">close</span>
              </button>
            )}
 
-           {/* Search Results */}
+           {/* Search Results Dropdown (MD3 Menu) */}
            {searchText && searchResults.length > 0 && (
-             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto z-40">
-               {searchResults.map((customer) => (
-                 <div
-                   key={customer.id}
-                   onClick={() => {
-                     handleSearchResultClick(customer.id);
-                     setSearchText('');
-                   }}
-                   className="p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition"
-                 >
-                   <div className="font-medium text-gray-800 text-sm">{customer.ad_soyad}</div>
-                   <div className="flex gap-4 mt-1">
-                     <span className="text-xs text-gray-500">{customer.telefon || '-'}</span>
-                     <span className="text-xs text-gray-400">{customer.marka_model || '-'}</span>
-                   </div>
-                   <div className="text-xs text-blue-700 mt-1 font-medium flex items-center gap-1">
-                     <span>&gt; {getStatusDisplayName(customer.status)}</span>
-                     {getDaysSinceCreated(customer.created_at) !== null && (
-                       <span className="text-[10px] text-red-600 font-semibold">{getDaysSinceCreated(customer.created_at)} gün</span>
-                     )}
-                   </div>
-                 </div>
-               ))}
+             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-50 animate-fadeIn border border-gray-100">
+               <div className="py-2 max-h-96 overflow-y-auto">
+                  {searchResults.map((customer) => (
+                    <div
+                      key={customer.id}
+                      onClick={() => {
+                        handleSearchResultClick(customer.id);
+                        setSearchText('');
+                      }}
+                      className="px-4 py-3 hover:bg-surface-container-high cursor-pointer transition-colors border-b border-gray-50 last:border-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{customer.ad_soyad}</p>
+                          <div className="flex gap-3 mt-0.5 text-sm text-gray-500">
+                             <span>{customer.telefon || '-'}</span>
+                             <span>•</span>
+                             <span>{customer.marka_model || '-'}</span>
+                          </div>
+                        </div>
+                        <span className="material-icons text-gray-400">chevron_right</span>
+                      </div>
+                      
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                          {getStatusDisplayName(customer.status)}
+                        </span>
+                        {getDaysSinceCreated(customer.created_at) !== null && (
+                          <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded">
+                            {getDaysSinceCreated(customer.created_at)} gün
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+               </div>
              </div>
            )}
 
            {/* No Results */}
            {searchText && searchResults.length === 0 && (
-             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-40">
-               <p className="text-gray-500 text-center text-sm">Müşteri bulunamadı</p>
+             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl p-6 z-50 text-center border border-gray-100">
+               <span className="material-icons text-4xl text-gray-300 mb-2">search_off</span>
+               <p className="text-gray-500 text-sm">Müşteri bulunamadı</p>
              </div>
            )}
          </div>
        </div>
        
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+       {/* Cards Grid */}
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
          {statusCards.map((card) => (
            <div 
              key={card.id}
              onClick={() => handleCardClick(card.statusId)}
-             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-             style={{ borderLeftColor: themeColor, borderLeftWidth: '4px' }}
+             className="group relative bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden"
            >
-             <div className="flex items-center justify-between mb-2">
-               <span className="material-icons text-2xl" style={{ color: themeColor }}>
-                 {card.icon}
-               </span>
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <span className="material-icons text-8xl" style={{ color: themeColor }}>{card.icon}</span>
              </div>
-             <p className="text-sm font-medium text-gray-600 mb-2">{card.label}</p>
-             <p className="text-2xl font-bold" style={{ color: themeColor }}>{stats[card.statusId] ?? '-'}</p>
+             
+             <div className="relative z-10 flex flex-col h-full justify-between">
+               <div className="flex items-center gap-3 mb-4">
+                 <div className="p-3 rounded-xl bg-gray-50 group-hover:bg-white transition-colors shadow-inner">
+                   <span className="material-icons text-2xl" style={{ color: themeColor }}>{card.icon}</span>
+                 </div>
+                 <h3 className="font-medium text-gray-700 text-lg group-hover:text-gray-900 transition-colors">{card.label}</h3>
+               </div>
+               
+               <div className="flex items-end justify-between">
+                  <span className="text-3xl font-bold tracking-tight text-gray-900">{stats[card.statusId] ?? '-'}</span>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 text-gray-400 group-hover:bg-primary group-hover:text-white transition-all">
+                    <span className="material-icons text-sm">arrow_forward</span>
+                  </div>
+               </div>
+             </div>
+             
+             {/* Bottom accent line */}
+             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-0 group-hover:opacity-30 transition-opacity" style={{ color: themeColor }}></div>
            </div>
          ))}
        </div>
@@ -714,242 +766,291 @@ function StatusList({showBelgeModal, setShowBelgeModal, selectedBelgeData, setSe
   useDataRefreshListener(fetchStatusList, [status]);
   
   return (
-    <div className="p-4">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-8">
         <button 
           onClick={() => navigate('/')}
-          className="material-icons text-2xl text-gray-600 hover:text-gray-800 cursor-pointer"
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
         >
-          arrow_back
+          <span className="material-icons">arrow_back</span>
         </button>
-        <h2 className="text-3xl font-bold">{getStatusLabel(status)}</h2>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-gray-500">Durum Listesi</span>
+          <h2 className="text-2xl font-bold text-gray-900">{getStatusLabel(status)}</h2>
+        </div>
       </div>
       
       {isLoading ? (
-        <p className="text-center text-gray-500">Yükleniyor...</p>
+        <div className="flex justify-center items-center h-64">
+           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
       ) : statusList.length === 0 ? (
-        <p className="text-center text-gray-500">Kayıt bulunamadı</p>
+        <div className="flex flex-col items-center justify-center h-64 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+          <span className="material-icons text-4xl text-gray-300 mb-2">folder_off</span>
+          <p className="text-gray-500 font-medium">Bu durumda kayıt bulunamadı</p>
+        </div>
       ) : (
         <>
-          {/* Desktop Table */}
-          <div className="hidden md:block relative overflow-x-auto bg-gray-50 shadow-sm rounded-lg border border-gray-200">
-            <table className="w-full text-sm text-left text-gray-700">
-              <thead className="text-sm font-semibold text-gray-900 border-b border-gray-200" style={{ backgroundColor: `${themeColor}12` }}>
-                <tr>
-                  <th scope="col" className="px-3 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4"
-                    />
-                  </th>
-                  <th scope="col" className="px-6 py-3">İsim</th>
-                  <th scope="col" className="px-6 py-3">Telefon</th>
-                  <th scope="col" className="px-6 py-3">Cihaz Modeli</th>
-                  <th scope="col" className="px-6 py-3">Belgeler</th>
-                  <th scope="col" className="px-6 py-3 text-center">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statusList.map((item) => (
-                  <tr key={item.id} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition">
-                    <td className="px-3 py-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => toggleSingleSelect(item.id)}
-                        className="w-4 h-4"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium">{item.ad_soyad}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(item.created_at).toLocaleDateString('tr-TR')} {new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+          {/* Desktop Table - MD3 Style */}
+          <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <th className="px-6 py-4 w-16 text-center">
+                      <div className="flex items-center justify-center">
+                         <input
+                          type="checkbox"
+                          checked={allVisibleSelected}
+                          onChange={toggleSelectAll}
+                          className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary/25 cursor-pointer"
+                        />
                       </div>
-                    </td>
-                    <td className="px-6 py-4">{item.telefon || '-'}</td>
-                    <td className="px-6 py-4">{item.marka_model || '-'}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([letter, field]) => {
-                          const hasBelge = item[field] ? true : false;
-                          const handleBelgeClick = () => {
-                            setSelectedBelgeData({ imageData: item[field] || null, type: letter, adi: item.ad_soyad, customerId: item.id });
-                            setShowBelgeModal(true);
-                          };
-                          return (
-                            <div 
-                              key={letter}
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center font-semibold text-xs border-2 cursor-pointer transition ${hasBelge ? 'text-white' : ''}`}
-                              style={{ 
-                                borderColor: themeColor,
-                                borderStyle: hasBelge ? 'solid' : 'dashed',
-                                backgroundColor: hasBelge ? themeColor : 'transparent',
-                                color: hasBelge ? 'white' : themeColor
-                              }}
-                              onClick={handleBelgeClick}
-                              title={hasBelge ? `${letter} belgesi - Tıkla` : `${letter} belgesi - Boş`}
-                            >
-                              {letter}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center space-x-3 flex justify-center">
-                      <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition border border-blue-300 rounded-lg p-2 flex items-center justify-center" title="Düzenle">
-                        <span className="material-icons">edit</span>
-                      </button>
-                      <button onClick={() => handlePrintRepairSlip(item)} className="text-green-600 hover:text-green-800 hover:bg-green-50 transition border border-green-300 rounded-lg p-2 flex items-center justify-center" title="Tamir Fişi Yazdır">
-                        <span className="material-icons">print</span>
-                      </button>
-                      <button className="text-red-600 hover:text-red-800 hover:bg-red-50 transition border border-red-300 rounded-lg p-2 flex items-center justify-center" title="Sil" onClick={() => handleDelete(item.id, item.ad_soyad)}>
-                        <span className="material-icons">delete</span>
-                      </button>
-                    </td>
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Müşteri Bilgisi</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">İletişim</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Cihaz</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Belgeler</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">İşlemler</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {statusList.map((item) => (
+                    <tr key={item.id} className="group hover:bg-gray-50/80 transition-colors">
+                      <td className="px-6 py-4 text-center">
+                         <div className="flex items-center justify-center">
+                           <input
+                            type="checkbox"
+                            checked={selectedIds.includes(item.id)}
+                            onChange={() => toggleSingleSelect(item.id)}
+                            className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary/25 cursor-pointer"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                            {item.ad_soyad?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{item.ad_soyad}</div>
+                            <div className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-1">
+                              <span className="material-icons text-[14px]">calendar_today</span>
+                              {new Date(item.created_at).toLocaleDateString('tr-TR')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded-md font-mono">{item.telefon || '-'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-medium text-gray-800">{item.marka_model || '-'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-1.5">
+                          {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([letter, field]) => {
+                            const hasBelge = item[field] ? true : false;
+                            const handleBelgeClick = () => {
+                              setSelectedBelgeData({ imageData: item[field] || null, type: letter, adi: item.ad_soyad, customerId: item.id });
+                              setShowBelgeModal(true);
+                            };
+                            return (
+                              <button 
+                                key={letter}
+                                onClick={handleBelgeClick}
+                                disabled={!hasBelge}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                                  hasBelge 
+                                    ? 'bg-secondary-container text-on-surface hover:bg-secondary/20 shadow-sm' 
+                                    : 'bg-gray-100 text-gray-300 cursor-default'
+                                }`}
+                                title={hasBelge ? `${letter} Gör` : 'Yok'}
+                              >
+                                {letter}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEdit(item)} className="w-10 h-10 rounded-full hover:bg-blue-50 text-blue-600 flex items-center justify-center transition-colors" title="Düzenle">
+                            <span className="material-icons text-[20px]">edit</span>
+                          </button>
+                          <button onClick={() => handlePrintRepairSlip(item)} className="w-10 h-10 rounded-full hover:bg-green-50 text-green-600 flex items-center justify-center transition-colors" title="Yazdır">
+                            <span className="material-icons text-[20px]">print</span>
+                          </button>
+                          <button onClick={() => handleDelete(item.id, item.ad_soyad)} className="w-10 h-10 rounded-full hover:bg-red-50 text-red-600 flex items-center justify-center transition-colors" title="Sil">
+                            <span className="material-icons text-[20px]">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Bulk Actions Footer - Desktop */}
+            {selectedIds.length > 0 && (
+              <div className="bg-primary/5 border-t border-primary/10 p-4 flex items-center justify-between animate-fadeIn">
+                 <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-primary bg-white px-3 py-1 rounded-full shadow-sm">{selectedIds.length} kayıt seçildi</span>
+                    <button onClick={() => setSelectedIds([])} className="text-sm text-gray-500 hover:text-gray-900 underline">Temizle</button>
+                 </div>
+                 
+                 <div className="flex items-center gap-3">
+                    <select
+                      value={targetStatusId}
+                      onChange={(e) => setTargetStatusId(e.target.value)}
+                      className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                    >
+                      <option value="">Hedef statü seçin...</option>
+                      {Object.entries(statusMap)
+                        .filter(([id]) => Number(id) !== currentStatusId)
+                        .map(([id, label]) => (
+                          <option key={id} value={id}>{label}</option>
+                        ))}
+                    </select>
+                    
+                    <button
+                      onClick={handleBulkStatusMove}
+                      disabled={!targetStatusId || isBulkMoving}
+                      className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-full text-sm font-medium hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 disabled:shadow-none transition-all"
+                    >
+                      {isBulkMoving ? 'İşleniyor...' : 'Durumu Değiştir'}
+                    </button>
+                    
+                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                    
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={isBulkDeleting}
+                      className="flex items-center gap-2 px-4 py-2 text-red-700 bg-red-50 hover:bg-red-100 rounded-full text-sm font-medium transition-colors"
+                    >
+                      <span className="material-icons text-[18px]">delete</span>
+                      Sil
+                    </button>
+                 </div>
+              </div>
+            )}
           </div>
 
-          {/* Mobile Cards */}
+          {/* Mobile Cards - MD3 Style */}
           <div className="md:hidden space-y-4">
+             {selectedIds.length > 0 && (
+              <div className="sticky top-[70px] z-30 bg-surface-container-high p-4 rounded-xl shadow-md border border-gray-200 mb-6 flex flex-col gap-3 animate-slideDown">
+                 <div className="flex items-center justify-between">
+                    <span className="font-bold text-primary">{selectedIds.length} Seçili</span>
+                    <button onClick={() => setSelectedIds([])} className="text-sm text-gray-500">Vazgeç</button>
+                 </div>
+                 <div className="grid grid-cols-2 gap-2">
+                     <select
+                        value={targetStatusId}
+                        onChange={(e) => setTargetStatusId(e.target.value)}
+                        className="col-span-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">Hedef...</option>
+                        {Object.entries(statusMap)
+                          .filter(([id]) => Number(id) !== currentStatusId)
+                          .map(([id, label]) => (
+                            <option key={id} value={id}>{label}</option>
+                          ))}
+                      </select>
+                      <button 
+                        onClick={handleBulkStatusMove}
+                        disabled={!targetStatusId}
+                        className="bg-primary text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      >
+                        Taşı
+                      </button>
+                      <button 
+                        onClick={handleBulkDelete}
+                        className="bg-red-50 text-red-700 py-2 rounded-lg text-sm font-medium border border-red-200"
+                      >
+                        Sil
+                      </button>
+                 </div>
+              </div>
+            )}
+
             {statusList.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                  <h3 className="font-semibold text-gray-900">{item.ad_soyad}</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(item.created_at).toLocaleDateString('tr-TR')} {new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(item.id)}
-                    onChange={() => toggleSingleSelect(item.id)}
-                    className="w-5 h-5 mt-1"
-                  />
-                </div>
+              <div 
+                key={item.id} 
+                className={`
+                  relative bg-white p-5 rounded-2xl border transition-all duration-200 shadow-sm
+                  ${selectedIds.includes(item.id) 
+                    ? 'border-primary ring-1 ring-primary bg-primary/5' 
+                    : 'border-gray-100 hover:shadow-md'
+                  }
+                `}
+              >
+                {/* Selection Overlay */}
+                <div onClick={() => toggleSingleSelect(item.id)} className="absolute inset-0 z-0"></div>
                 
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Telefon:</span>
-                    <span className="font-medium">{item.telefon || '-'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Cihaz:</span>
-                    <span className="font-medium">{item.marka_model || '-'}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <p className="text-xs text-gray-600 mb-2 text-center">Belgeler:</p>
-                  <div className="flex gap-2 justify-center">
-                    {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([letter, field]) => {
-                      const hasBelge = item[field] ? true : false;
-                      const handleBelgeClick = () => {
-                        setSelectedBelgeData({ imageData: item[field] || null, type: letter, adi: item.ad_soyad, customerId: item.id });
-                        setShowBelgeModal(true);
-                      };
-                      return (
-                        <div 
-                          key={letter}
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center font-semibold text-sm border-2 cursor-pointer transition ${hasBelge ? 'text-white' : ''}`}
-                          style={{ 
-                            borderColor: themeColor,
-                            borderStyle: hasBelge ? 'solid' : 'dashed',
-                            backgroundColor: hasBelge ? themeColor : 'transparent',
-                            color: hasBelge ? 'white' : themeColor
-                          }}
-                          onClick={handleBelgeClick}
-                          title={hasBelge ? `${letter} belgesi - Tıkla` : `${letter} belgesi - Boş`}
-                        >
-                          {letter}
+                <div className="relative z-10 pointer-events-none">
+                  <div className="flex items-start justify-between mb-3">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary font-bold text-lg">
+                          {item.ad_soyad?.charAt(0) || '?'}
                         </div>
-                      );
-                    })}
+                        <div>
+                          <h3 className="font-semibold text-gray-900 text-lg leading-tight">{item.ad_soyad}</h3>
+                           <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <span className="material-icons text-[12px]">schedule</span>
+                              {new Date(item.created_at).toLocaleDateString()}
+                           </p>
+                        </div>
+                     </div>
+                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedIds.includes(item.id) ? 'border-primary bg-primary text-white' : 'border-gray-300'}`}>
+                        {selectedIds.includes(item.id) && <span className="material-icons text-[16px]">check</span>}
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4 pl-[52px]">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="material-icons text-[18px] text-gray-400">smartphone</span>
+                      <span className="font-medium">{item.marka_model || 'Model Yok'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="material-icons text-[18px] text-gray-400">call</span>
+                      <span className="font-mono">{item.telefon || '-'}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4 flex gap-2 justify-center">
-                  <button onClick={() => handleEdit(item)} className="flex-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition border border-blue-300 rounded-lg p-2 flex items-center justify-center" title="Düzenle">
-                    <span className="material-icons">edit</span>
-                  </button>
-                  <button onClick={() => handlePrintRepairSlip(item)} className="flex-1 text-green-600 hover:text-green-800 hover:bg-green-50 transition border border-green-300 rounded-lg p-2 flex items-center justify-center" title="Tamir Fişi Yazdır">
-                    <span className="material-icons">print</span>
-                  </button>
-                  <button className="flex-1 text-red-600 hover:text-red-800 hover:bg-red-50 transition border border-red-300 rounded-lg p-2 flex items-center justify-center" title="Sil" onClick={() => handleDelete(item.id, item.ad_soyad)}>
-                    <span className="material-icons">delete</span>
-                  </button>
+                <div className="relative z-20 flex items-center justify-between pt-4 border-t border-gray-100 mt-2 pl-[52px]">
+                   <div className="flex gap-1">
+                      {[['F', 'belge_f'], ['G', 'belge_g']].map(([letter, field]) => (
+                        item[field] && (
+                          <div key={letter} className="w-6 h-6 rounded bg-green-50 text-green-700 flex items-center justify-center text-[10px] font-bold border border-green-200">
+                            {letter}
+                          </div>
+                        )
+                      ))}
+                   </div>
+                   
+                   <div className="flex gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-50 text-gray-700 active:bg-gray-200">
+                        <span className="material-icons text-[20px]">edit</span>
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handlePrintRepairSlip(item); }} className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-50 text-blue-700 active:bg-blue-200">
+                        <span className="material-icons text-[20px]">print</span>
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.ad_soyad); }} className="w-9 h-9 flex items-center justify-center rounded-full bg-red-50 text-red-700 active:bg-red-200">
+                        <span className="material-icons text-[20px]">delete</span>
+                      </button>
+                   </div>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Toplu İşlemler - Bottom */}
-          <div className="mb-4 flex items-center gap-1 md:gap-3 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowBulkActions((prev) => !prev)}
-              className="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition shrink-0"
-            >
-              Toplu İşlemler
-            </button>
-
-            <div
-              className={`flex-1 min-w-0 transition-all duration-300 ease-out transform bg-white border border-gray-200 rounded-lg p-3 ${showBulkActions ? 'opacity-100 translate-x-0 max-w-[1400px]' : 'opacity-0 translate-x-8 max-w-0 pointer-events-none'}`}
-            >
-              <div className="flex flex-col md:flex-row md:items-center gap-3">
-                <div className="text-sm font-medium text-gray-700">
-                  {selectedIds.length} kayıt seçildi
-                </div>
-                <button
-                  type="button"
-                  onClick={toggleSelectAll}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                >
-                  {allVisibleSelected ? 'Seçimi Temizle' : 'Tümünü Seç'}
-                </button>
-                <div className="flex-1" />
-                <select
-                  value={targetStatusId}
-                  onChange={(e) => setTargetStatusId(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-56"
-                >
-                  <option value="">Hedef statü seçin</option>
-                  {Object.entries(statusMap)
-                    .filter(([id]) => Number(id) !== currentStatusId)
-                    .map(([id, label]) => (
-                      <option key={id} value={id}>{label}</option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleBulkStatusMove}
-                  disabled={selectedIds.length === 0 || !targetStatusId || isBulkMoving}
-                  className="px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: themeColor }}
-                >
-                  {isBulkMoving ? 'Taşınıyor...' : 'Seçilenleri Taşı'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBulkDelete}
-                  disabled={selectedIds.length === 0 || isBulkDeleting}
-                  className="px-4 py-2 rounded-lg text-sm font-medium border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isBulkDeleting ? 'Siliniyor...' : 'Toplu Sil'}
-                </button>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
-      {/* Edit Modal */}
-      {/* Edit modal removed - now using /edit/:customerId route */}
+      {/* Edit Modal (Removed / Handled by Route) */}
     </div>
   );
 }
@@ -1146,16 +1247,27 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
   };
 
   return (
-    <div className="p-4 flex items-start justify-center min-h-screen bg-gray-50">
-       <div className="w-full max-w-6xl">
-         <div className="flex items-center justify-between mb-6">
-           <h2 className="text-2xl font-bold" style={{ color: themeColor }}>Müşteri Kabul</h2>
-           <div className="flex gap-1.5">
+    <div className="p-4 sm:p-6 min-h-screen bg-gray-50 flex justify-center">
+       <div className="w-full max-w-4xl">
+         {/* Breadcrumb-ish Header */}
+         <div className="flex items-center gap-4 mb-6">
+           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+             <span className="material-icons text-2xl">person_add</span>
+           </div>
+           <div>
+             <h2 className="text-2xl font-bold text-gray-900">Müşteri Kabul</h2>
+             <p className="text-sm text-gray-500">Yeni servis kaydı oluştur</p>
+           </div>
+           
+           {/* Quick Document Status Indicators */}
+           <div className="ml-auto flex gap-2">
              {[['F', 'belge_f'], ['G', 'belge_g'], ['Ü', 'belge_u'], ['A', 'belge_a']].map(([label, fieldName]) => (
                <div
                  key={fieldName}
-                 className="relative w-9 h-9 rounded-full border flex items-center justify-center overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                 style={{ borderColor: belgeBase64[fieldName] ? themeColor : '#d1d5db', backgroundColor: belgeBase64[fieldName] ? 'transparent' : '#f9fafb' }}
+                 className={`
+                   relative w-8 h-8 rounded-lg border-2 flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer
+                   ${belgeBase64[fieldName] ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200 bg-white hover:border-gray-300'}
+                 `}
                  title={label}
                  onClick={() => {
                    if (belgeBase64[fieldName]) {
@@ -1167,264 +1279,170 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
                  {belgeBase64[fieldName] ? (
                    <img src={belgeBase64[fieldName]} alt={label} className="w-full h-full object-cover" />
                  ) : (
-                   <span className="text-xs font-semibold" style={{ color: themeColor }}>{label}</span>
+                   <span className="text-xs font-bold text-gray-400">{label}</span>
+                 )}
+                 {/* Success Badge */}
+                 {belgeBase64[fieldName] && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <span className="material-icons text-white text-sm drop-shadow-md">check</span>
+                    </div>
                  )}
                </div>
              ))}
            </div>
          </div>
          
-         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-           <form onSubmit={handleSubmit}>
-           {/* Form Grid - 2 Columns */}
-           <div className="grid grid-cols-2 gap-4 mb-6">
-           {/* Ad Soyad */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Ad Soyad</label>
-             <input
-               type="text"
-               name="adSoyad"
-               value={formData.adSoyad}
-               onChange={handleChange}
-               placeholder="Ör: Ayşe Yılmaz"
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-
-           {/* Telefon */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Telefon</label>
-             <input
-               type="tel"
-               name="telefon"
-               value={formData.telefon}
-               onChange={handleChange}
-               placeholder="+90 5XX XXX XX XX"
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-
-           {/* Marka / Model */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Marka / Model</label>
-             <input
-               type="text"
-               name="markaModel"
-               value={formData.markaModel}
-               onChange={handleChange}
-               placeholder="Ör: Samsung Galaxy S22"
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-
-           {/* Aksesuarlar */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Aksesuarlar</label>
-             <input
-               type="text"
-               name="aksesuarlar"
-               value={formData.aksesuarlar}
-               onChange={handleChange}
-               placeholder="Kutu, şarj aleti, kalem vb."
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-           </div>
-
-           {/* Belgeler Yükleme */}
-           <div className="mb-6">
-             <label className="block text-sm font-medium mb-3 text-center" style={{ color: themeColor }}>📄 Belgeler</label>
-             <div className="flex justify-center flex-wrap gap-2">
-               {[['Fatura (F)', 'belge_f'], ['Garanti (G)', 'belge_g'], ['Üretim (Ü)', 'belge_u'], ['Arıza (A)', 'belge_a']].map(([label, fieldName]) => (
-                 <label key={fieldName} className="relative group">
-                   <button
-                     type="button"
-                     className="px-3 py-1 border rounded text-sm hover:bg-gray-50 transition flex items-center gap-1"
-                     style={{ borderColor: themeColor, color: themeColor }}
-                     onClick={(e) => e.currentTarget.nextElementSibling.click()}
-                   >
-                     <span className="material-icons text-sm">attach_file</span>
-                     {label}
-                     {formData[fieldName] && <span className="text-green-600 text-xs">✓</span>}
-                   </button>
+         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
+           <form onSubmit={handleSubmit} className="space-y-6">
+             {/* Form Grid */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Ad Soyad */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Ad Soyad</label>
                    <input
-                     type="file"
-                     accept="image/*"
-                     className="hidden"
-                     name={fieldName}
-                     onChange={handleFileChange}
+                     type="text"
+                     name="adSoyad"
+                     value={formData.adSoyad}
+                     onChange={handleChange}
+                     placeholder="Ör: Ayşe Yılmaz"
+                     className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-gray-900 placeholder:text-gray-400 outline-none"
                    />
-                 </label>
-               ))}
+                 </div>
+
+                 {/* Telefon */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Telefon</label>
+                   <input
+                     type="tel"
+                     name="telefon"
+                     value={formData.telefon}
+                     onChange={handleChange}
+                     placeholder="+90 5XX XXX XX XX"
+                     className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-mono font-medium text-gray-900 placeholder:text-gray-400 outline-none"
+                   />
+                 </div>
+
+                 {/* Marka / Model */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Marka / Model</label>
+                   <input
+                     type="text"
+                     name="markaModel"
+                     value={formData.markaModel}
+                     onChange={handleChange}
+                     placeholder="Ör: Samsung Galaxy S22"
+                     className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-gray-900 placeholder:text-gray-400 outline-none"
+                   />
+                 </div>
+
+                 {/* Aksesuarlar */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Aksesuarlar</label>
+                   <input
+                     type="text"
+                     name="aksesuarlar"
+                     value={formData.aksesuarlar}
+                     onChange={handleChange}
+                     placeholder="Kutu, şarj aleti, kalem vb."
+                     className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-gray-900 placeholder:text-gray-400 outline-none"
+                   />
+                 </div>
              </div>
-           </div>
 
-           {/* Full-width fields */}
-           <div className="space-y-4">
-           {/* Müşteri Şikayeti */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Müşteri Şikayeti</label>
-             <textarea
-               name="museriSikayeti"
-               value={formData.museriSikayeti}
-               onChange={handleChange}
-               placeholder="Cihazın yaşadığı problemi detaylıca yazın."
-               rows="3"
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-
-           {/* Not */}
-           <div>
-             <label className="block text-sm font-medium mb-1" style={{ color: themeColor }}>Not (Varsa)</label>
-             <textarea
-               name="not"
-               value={formData.not}
-               onChange={handleChange}
-               placeholder="Ek bilgi veya hatırlatmalar."
-               rows="2"
-               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm transition"
-               style={{ borderColor: 'rgb(209, 213, 219)', boxShadow: 'rgba(33, 150, 243, 0) 0 0 0 0' }}
-               onFocus={(e) => {
-                 e.target.style.borderColor = themeColor;
-                 e.target.style.boxShadow = `0 0 0 3px ${themeColor}20`;
-               }}
-               onBlur={(e) => {
-                 e.target.style.borderColor = 'rgb(209, 213, 219)';
-                 e.target.style.boxShadow = 'rgba(33, 150, 243, 0) 0 0 0 0';
-               }}
-             />
-           </div>
-           </div>
-
-           {/* Buttons */}
-           <div className="flex gap-3 pt-4">
-             <button
-               type="submit"
-               disabled={isLoading || isCompressing}
-               className="w-full text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-               style={{ backgroundColor: themeColor }}
-             >
-               {isCompressing ? 'Resim Hazırlanıyor...' : isLoading ? 'Gönderiliyor...' : 'Kaydet'}
-             </button>
-           </div>
-
-           {/* Success/Error Message */}
-           {submitMessage && (
-             <div className={`mt-4 p-4 rounded-lg border ${
-               submitMessage.type === 'success' 
-                 ? 'bg-green-50 border-green-200' 
-                 : 'bg-red-50 border-red-200'
-             }`}>
-               <p className={`font-semibold ${
-                 submitMessage.type === 'success' 
-                   ? 'text-green-800' 
-                   : 'text-red-800'
-               }`}>
-                 {submitMessage.title}
-               </p>
-               <p className={`text-sm mt-1 ${
-                 submitMessage.type === 'success' 
-                   ? 'text-green-700' 
-                   : 'text-red-700'
-               }`}>
-                 {submitMessage.message}
-               </p>
+             {/* Documents */}
+             <div className="py-4 border-t border-b border-gray-100">
+               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 text-center">Belge Yükle</label>
+               <div className="flex flex-wrap justify-center gap-3">
+                 {[['Fatura', 'belge_f', 'description'], ['Garanti', 'belge_g', 'verified'], ['Üretim', 'belge_u', 'factory'], ['Arıza', 'belge_a', 'broken_image']].map(([label, fieldName, icon]) => (
+                   <label key={fieldName} className={`cursor-pointer group flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200 ${formData[fieldName] ? 'bg-primary/5 border-primary text-primary' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'}`}>
+                     <input type="file" accept="image/*" className="hidden" name={fieldName} onChange={handleFileChange} />
+                     <span className={`material-icons text-[18px] ${formData[fieldName] ? 'text-primary' : 'text-gray-400 group-hover:text-gray-600'}`}>{formData[fieldName] ? 'check_circle' : icon}</span>
+                     <span className="text-sm font-medium">{label}</span>
+                   </label>
+                 ))}
+               </div>
              </div>
-           )}
 
-         </form>
-       </div>
+             {/* Full-width fields */}
+             <div className="space-y-6">
+                 {/* Müşteri Şikayeti */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Müşteri Şikayeti</label>
+                   <textarea name="museriSikayeti" value={formData.museriSikayeti} onChange={handleChange} placeholder="Cihazın yaşadığı problemi detaylıca yazın." rows="3" className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-gray-900 placeholder:text-gray-400 resize-none outline-none" />
+                 </div>
+
+                 {/* Not */}
+                 <div className="group">
+                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 group-focus-within:text-primary transition-colors">Not (Varsa)</label>
+                   <textarea name="not" value={formData.not} onChange={handleChange} placeholder="Ek bilgi veya hatırlatmalar." rows="2" className="w-full px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-gray-900 placeholder:text-gray-400 resize-none outline-none" />
+                 </div>
+             </div>
+
+             {/* Submit Button */}
+             <div className="pt-4">
+               <button type="submit" disabled={isLoading || isCompressing} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" style={{ backgroundColor: themeColor }}>
+                 {isCompressing ? <><span className="animate-spin material-icons">refresh</span>Resimler Hazırlanıyor...</> : isLoading ? <><span className="animate-spin material-icons">refresh</span>Kaydediliyor...</> : <><span className="material-icons">save</span>Kaydı Oluştur</>}
+               </button>
+             </div>
+
+             {/* Success/Error Message */}
+             {submitMessage && (
+               <div className={`mt-6 p-4 rounded-xl flex items-start gap-4 animate-fadeIn ${submitMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${submitMessage.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <span className="material-icons text-sm">{submitMessage.type === 'success' ? 'check' : 'priority_high'}</span>
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-sm mb-1">{submitMessage.title}</h4>
+                   <p className="text-sm opacity-90">{submitMessage.message}</p>
+                 </div>
+               </div>
+             )}
+           </form>
+         </div>
        </div>
 
        {/* Belge Modal */}
        {showBelgeModal && selectedBelgeData && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-           <div className="bg-white rounded-xl max-w-2xl w-full h-[90vh] flex flex-col shadow-2xl">
-             <div className="p-6 border-b flex justify-between items-center">
-               <h3 className="text-xl font-semibold">{selectedBelgeData.type} Belgesi - {selectedBelgeData.adi}</h3>
-               <button 
-                 onClick={() => setShowBelgeModal(false)}
-                 className="text-gray-500 hover:text-gray-700 text-2xl"
-               >
-                 ✕
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowBelgeModal(false)}>
+           <div className="bg-white rounded-2xl max-w-2xl w-full h-[90vh] flex flex-col shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
+             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-icons">image</span>
+                 </div>
+                 <div>
+                    <h3 className="text-lg font-bold text-gray-900">{selectedBelgeData.type} Belgesi</h3>
+                    <p className="text-sm text-gray-500">{selectedBelgeData.adi}</p>
+                 </div>
+               </div>
+               <button onClick={() => setShowBelgeModal(false)} className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                 <span className="material-icons text-gray-500">close</span>
                </button>
              </div>
 
-             <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 p-4">
+             <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50/50 p-4">
                {selectedBelgeData.imageData ? (
-                 <img src={selectedBelgeData.imageData} alt={`${selectedBelgeData.type} Belgesi`} className="max-w-full max-h-full object-contain" />
+                 <img src={selectedBelgeData.imageData} alt={`${selectedBelgeData.type} Belgesi`} className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
                ) : (
-                 <p className="text-gray-500">Henüz resim yüklenmemiş</p>
+                 <div className="flex flex-col items-center justify-center text-gray-400">
+                    <span className="material-icons text-4xl mb-2">image_not_supported</span>
+                    <p>Henüz resim yüklenmemiş</p>
+                 </div>
                )}
              </div>
 
-             <div className="p-6 border-t flex gap-2 justify-end">
-               <button
-                 onClick={() => setShowBelgeModal(false)}
-                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-               >
-                 Kapat
-               </button>
+             <div className="p-6 border-t border-gray-100 bg-white flex gap-3 justify-end items-center z-10">
+               <button onClick={() => setShowBelgeModal(false)} className="px-5 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors">Kapat</button>
                {selectedBelgeData.imageData && (
-                 <button
-                   onClick={() => {
+                 <button onClick={() => {
                      const link = document.createElement('a');
                      link.href = selectedBelgeData.imageData;
                      link.download = `${selectedBelgeData.adi}_${selectedBelgeData.type}_Belgesi.jpg`;
                      document.body.appendChild(link);
                      link.click();
                      document.body.removeChild(link);
-                   }}
-                   className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition"
-                   style={{ backgroundColor: themeColor }}
-                 >
-                   İndir
+                   }} className="px-5 py-2.5 rounded-xl bg-primary text-white font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2">
+                   <span className="material-icons text-sm">download</span> İndir
                  </button>
                )}
              </div>
@@ -1433,8 +1451,8 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
        )}
     </div>
   );
-}
 
+}
 function MusteriMontaj() {
   return (
     <div className="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700">
@@ -2271,133 +2289,139 @@ function CihazKurulum() {
   };
 
   return (
-    <div className="p-4">
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Cihaz Kurulum Listesi</h2>
-          <button
-            type="button"
-            onClick={fetchMontaj}
-            className="px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            Yenile
-          </button>
-        </div>
-
-        {message && (
-          <p className={`text-sm mb-3 ${message.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>
-            {message.text}
-          </p>
-        )}
-
-        {loading ? (
-          <p className="text-sm text-gray-500">Montaj kayıtları yükleniyor...</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-gray-500">Açık montaj kaydı yok.</p>
-        ) : (
-          <div className="space-y-3">
-            {items.map((item, index) => (
-              <div key={item.id || index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                <div className="grid grid-cols-1 gap-2 mb-3">
-                  <p className="text-sm text-gray-800"><span className="font-semibold">Ad Soyad:</span> {item.ad_soyad || '-'}</p>
-                  <p className="text-sm text-gray-700"><span className="font-semibold">Telefon:</span> {item.telefon || '-'}</p>
-                  <p className="text-sm text-gray-700"><span className="font-semibold">Adres:</span> {item.adres || '-'}</p>
-                  <div className="text-sm text-gray-700">
-                    <span className="font-semibold">Model:</span>{' '}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (item.belge_f) {
-                          const response = await fetch(`/api/montaj/${item.id}`);
-                          if (response.ok) {
-                            const fullItem = await response.json();
-                            setSelectedFatura(fullItem);
-                            setShowFaturaModal(true);
-                          }
-                        }
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        item.belge_f
-                          ? 'bg-green-100 text-green-800 cursor-pointer hover:bg-green-200'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                      title={item.belge_f ? 'Fatura yüklü - Tıkla' : 'Fatura yüklenmedi'}
-                    >
-                      {item.model || '-'} {item.belge_f && '✓'}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openCloseModal(item)}
-                  disabled={closingId === item.id || item?.kapatildi}
-                  className="w-full px-3 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-60"
-                  style={{ backgroundColor: themeColor }}
-                >
-                  {closingId === item.id ? 'Kapatılıyor...' : 'Montajı Kapat'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="p-4 sm:p-6 max-w-lg mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Kurulum Listesi</h2>
+        <button
+          type="button"
+          onClick={fetchMontaj}
+          className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+        >
+          <span className="material-icons">refresh</span>
+        </button>
       </div>
 
-      {showCloseModal && selectedMontaj && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Montajı Kapat</h3>
+      {message && (
+        <div className={`mb-4 p-4 rounded-xl flex items-start gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+           <span className="material-icons text-xl">{message.type === 'success' ? 'check_circle' : 'error'}</span>
+           <p className="text-sm font-medium">{message.text}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+          <span className="material-icons text-4xl text-gray-300 mb-2">assignment_turned_in</span>
+          <p className="text-gray-500 font-medium">Atanmış işiniz yok</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item, index) => (
+            <div key={item.id || index} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start gap-4 mb-4">
+                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                    {item.ad_soyad?.charAt(0) || '?'}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">{item.ad_soyad || 'İsimsiz'}</h3>
+                    <p className="text-sm text-gray-500 mt-0.5 truncate">{item.adres || 'Adres Girilmemiş'}</p>
+                 </div>
+              </div>
+              
+              <div className="flex flex-col gap-3 mb-5 pl-[64px]">
+                 <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="material-icons text-gray-400 text-[18px]">smartphone</span>
+                    <span className="font-mono">{item.telefon || '-'}</span>
+                 </div>
+                 
+                 <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="material-icons text-gray-400 text-[18px]">tv</span>
+                    <span className="font-medium">{item.model || '-'}</span>
+                    {item.belge_f && (
+                       <button
+                         onClick={async () => {
+                            const response = await fetch(`/api/montaj/${item.id}`);
+                            if (response.ok) {
+                              const fullItem = await response.json();
+                              setSelectedFatura(fullItem);
+                              setShowFaturaModal(true);
+                            }
+                         }}
+                         className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 hover:bg-green-200 transition-colors"
+                       >
+                         <span className="material-icons text-[14px]">receipt</span>
+                         Fatura
+                       </button>
+                    )}
+                 </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => {
-                  setShowCloseModal(false);
-                  setSelectedMontaj(null);
-                  setCloseFiles([]);
-                }}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={() => openCloseModal(item)}
+                disabled={closingId === item.id || item?.kapatildi}
+                className="w-full py-3 rounded-full text-white text-sm font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:shadow-none"
+                style={{ backgroundColor: themeColor }}
               >
-                ✕
+                {closingId === item.id ? 'İşleniyor...' : 'Montajı Tamamla'}
               </button>
             </div>
+          ))}
+        </div>
+      )}
 
-            <p className="text-sm text-gray-700 mb-3">
-              <span className="font-semibold">Kişi:</span> {selectedMontaj.ad_soyad || '-'}
+      {/* Close Modal - MD3 Style */}
+      {showCloseModal && selectedMontaj && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl animate-slideUp sm:animate-fadeIn">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 sm:hidden"></div>
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">Montajı Kapat</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {selectedMontaj.ad_soyad} için işlem detaylarını girin.
             </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Kurulum Tipi</label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Kurulum Tipi</label>
+              <div className="grid grid-cols-2 gap-3">
                 {['DUVAR', 'SEHPA'].map((tip) => (
                   <button
                     key={tip}
                     type="button"
                     onClick={() => setKurulumTipi(tip)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium ${kurulumTipi === tip ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                    className={`py-3 px-4 rounded-xl border-2 text-sm font-bold transition-all ${
+                      kurulumTipi === tip 
+                        ? 'border-primary bg-primary/5 text-primary' 
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
                   >
-                    {tip === 'DUVAR' ? 'Duvar' : 'Sehpa'}
+                    {tip === 'DUVAR' ? 'Duvar Montaj' : 'Sehpa Kurulum'}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Toplu Resim Yükle</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => setCloseFiles(Array.from(e.target.files || []))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">Seçilen dosya: {closeFiles.length}</p>
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Fotoğraflar</label>
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <span className="material-icons text-3xl text-gray-400 mb-2">add_a_photo</span>
+                      <p className="text-sm text-gray-500">{closeFiles.length > 0 ? `${closeFiles.length} fotoğraf seçildi` : 'Fotoğraf Çek / Yükle'}</p>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    multiple 
+                    className="hidden" 
+                    onChange={(e) => setCloseFiles(Array.from(e.target.files || []))}
+                  />
+              </label>
             </div>
 
-            {closeProgressText && (
-              <p className="text-sm text-blue-700 mb-3">{closeProgressText}</p>
-            )}
-
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2405,62 +2429,45 @@ function CihazKurulum() {
                   setSelectedMontaj(null);
                   setCloseFiles([]);
                 }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="flex-1 py-3 rounded-full font-medium text-gray-700 hover:bg-gray-100 transition-colors"
               >
-                İptal
+                Vazgeç
               </button>
               <button
                 type="button"
                 onClick={handleCloseMontaj}
                 disabled={closingId === selectedMontaj.id}
-                className="px-4 py-2 rounded-lg text-white font-medium disabled:opacity-60"
+                className="flex-1 py-3 rounded-full text-white font-bold shadow-lg shadow-primary/25 disabled:opacity-50"
                 style={{ backgroundColor: themeColor }}
               >
-                {closingId === selectedMontaj.id ? 'Kapatılıyor...' : 'Montajı Kapat'}
+                {closingId === selectedMontaj.id ? 'Kaydediliyor...' : 'Tamamla'}
               </button>
             </div>
+            
+            {closeProgressText && (
+               <div className="mt-4 text-center text-sm font-medium text-primary animate-pulse">
+                  {closeProgressText}
+               </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Fatura Modal */}
       {showFaturaModal && selectedFatura && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Fatura</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFaturaModal(false);
-                  setSelectedFatura(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-4 text-center">
-              {selectedFatura.belge_f && selectedFatura.belge_f.startsWith('data:') ? (
-                <img src={selectedFatura.belge_f} alt="Fatura" className="max-h-96 mx-auto rounded-lg" />
-              ) : (
-                <p className="text-gray-500">Fatura görseli bulunamadı</p>
-              )}
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFaturaModal(false);
-                  setSelectedFatura(null);
-                }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                Kapat
-              </button>
-            </div>
-          </div>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowFaturaModal(false)}>
+          <img 
+            src={selectedFatura.belge_f} 
+            alt="Fatura" 
+            className="max-h-[85vh] max-w-full rounded-lg shadow-2xl" 
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+            onClick={() => setShowFaturaModal(false)}
+          >
+             <span className="material-icons text-3xl">close</span>
+          </button>
         </div>
       )}
     </div>
@@ -3724,9 +3731,8 @@ function Layout({ themeColor, setThemeColor }) {
   const location = useLocation();
   const userLevel = (localStorage.getItem('level') || '').trim().toLowerCase();
   const isMontajTeam = userLevel === 'level3';
-  const mobileSquareButtonClass = 'flex flex-col items-center justify-center w-16 h-16 rounded-xl text-white hover:opacity-80';
   
-  // Hide sidebar and navbar on login and invoice upload pages
+  // Hide navigation on specific pages
   const isLoginPage = location.pathname === '/login';
   const isInvoiceUploadPage = location.pathname.startsWith('/fatura/');
   const hideNavigation = isLoginPage || isInvoiceUploadPage;
@@ -3736,122 +3742,141 @@ function Layout({ themeColor, setThemeColor }) {
   }, [])
 
   return (
-    <div className="antialiased bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Desktop Sidebar - Hide on login */}
+    <div className="antialiased bg-stone-50 min-h-screen text-gray-900 font-sans selection:bg-purple-100 selection:text-purple-900">
+      {/* Desktop Header - MD3 Top App Bar */}
       {!hideNavigation && (
-      <aside id="logo-sidebar" className="hidden sm:flex fixed top-0 left-0 z-40 w-24 h-screen transition-transform flex-col" aria-label="Sidebar">
-         <div className="h-full px-2 py-3 flex flex-col" style={{backgroundColor: `${themeColor}12`}}>
-            <ul className="space-y-2 font-medium flex-1 overflow-y-auto">
-               {isMontajTeam ? (
-                 <MenuItem 
-                   to="/cihaz_kurulum" 
-                   label="Kurulum" 
-                   themeColor={themeColor}
-                   iconName="local_shipping"
-                 />
-               ) : (
-                 <>
-                   <MenuItem 
-                     to="/" 
-                     label="Anasayfa" 
-                     themeColor={themeColor}
-                     iconName="home"
-                   />
-                   
-                   <MenuItem 
-                     to="/musteri/kabul" 
-                     label="Müşteri" 
-                     themeColor={themeColor}
-                     iconName="person_add"
-                   />
-                   
-                   <MenuItem 
-                     to="/montaj/ekle" 
-                     label="Montaj" 
-                     themeColor={themeColor}
-                     iconName="local_shipping"
-                   />
-                   
-                   <MenuItem 
-                     to="/irsaliye/olustur" 
-                     label="İrsaliye" 
-                     themeColor={themeColor}
-                     iconName="edit"
-                   />
-                 </>
-               )}
-            </ul>
-            <ul className="space-y-2 font-medium">
+      <header className="hidden sm:flex fixed top-0 left-0 right-0 z-50 h-[64px] bg-white/90 backdrop-blur-md border-b border-gray-200 transition-all shadow-sm" aria-label="Navigation">
+         <div className="w-full max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+            {/* Logo/Brand */}
+            <div className="flex items-center gap-3">
+               <div className="p-2 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl shadow-lg shadow-purple-200">
+                 <span className="material-icons text-white text-xl">build_circle</span>
+               </div>
+               <span className="text-xl font-bold tracking-tight text-gray-800">
+                 Teknik<span style={{ color: themeColor }}>Sis</span>
+               </span>
+            </div>
+
+            {/* Navigation Items (Pill shaped) */}
+            <nav className="flex-1 flex justify-center">
+              <ul className="flex items-center gap-2 bg-gray-100/50 p-1 rounded-full border border-gray-200/50">
+                {isMontajTeam ? (
+                  <MenuItem 
+                    to="/cihaz_kurulum" 
+                    label="Kurulum" 
+                    themeColor={themeColor}
+                    iconName="local_shipping"
+                    horizontal={true}
+                  />
+                ) : (
+                  <>
+                    <MenuItem 
+                      to="/" 
+                      label="Anasayfa" 
+                      themeColor={themeColor}
+                      iconName="home"
+                      horizontal={true}
+                    />
+                    
+                    <MenuItem 
+                      to="/musteri/kabul" 
+                      label="Müşteri" 
+                      themeColor={themeColor}
+                      iconName="person_add"
+                      horizontal={true}
+                    />
+                    
+                    <MenuItem 
+                      to="/montaj/ekle" 
+                      label="Montaj" 
+                      themeColor={themeColor}
+                      iconName="local_shipping"
+                      horizontal={true}
+                    />
+                    
+                    <MenuItem 
+                      to="/irsaliye/olustur" 
+                      label="İrsaliye" 
+                      themeColor={themeColor}
+                      iconName="edit"
+                      horizontal={true}
+                    />
+                  </>
+                )}
+              </ul>
+            </nav>
+
+            {/* Right Menu Items (Settings/Profile) */}
+            <div className="flex items-center gap-1">
                {!isMontajTeam && (
-                 <MenuItem 
-                   to="/ayarlar" 
-                   label="Ayarlar" 
-                   themeColor={themeColor}
-                   iconName="settings"
-                 />
+                 <Link to="/ayarlar" className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors">
+                   <span className="material-icons text-2xl">settings</span>
+                 </Link>
                )}
-               <MenuItem 
-                 to="/logout" 
-                 label="Çıkış" 
-                 themeColor={themeColor}
-                 iconName="power_settings_new"
-                 isLogout={true}
-               />
-            </ul>
+               <div className="w-px h-6 bg-gray-300 mx-2"></div>
+               <Link to="/logout" className="flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-100">
+                 <span className="material-icons text-[20px]">logout</span>
+                 <span className="text-sm font-medium">Çıkış</span>
+               </Link>
+            </div>
          </div>
-      </aside>
+      </header>
       )}
 
-      {/* Mobile Bottom Navigation - Hide on login */}
+      {/* Mobile Bottom Navigation - MD3 Navigation Bar */}
       {!hideNavigation && (
-      <nav className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t border-gray-200 px-2 py-2 z-40" style={{backgroundColor: themeColor}}>
-         <ul className="flex justify-around items-center">
+      <nav className="fixed bottom-0 left-0 right-0 sm:hidden bg-surface container-elevation shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-gray-100 z-50 h-[80px] pb-4">
+         <ul className="grid grid-cols-4 h-full items-center px-2">
             {isMontajTeam ? (
-              <li>
-                <Link to="/cihaz_kurulum" className={mobileSquareButtonClass}>
-                  <span className="material-icons text-xl">local_shipping</span>
-                  <span className="text-xs mt-0.5">Kurulum</span>
+              <li className="flex justify-center">
+                <Link to="/cihaz_kurulum" className="flex flex-col items-center gap-1 group">
+                  <div className={`w-16 h-8 rounded-full flex items-center justify-center transition-colors ${location.pathname === '/cihaz_kurulum' ? 'bg-secondary-container' : ''}`}>
+                    <span className="material-icons text-2xl text-on-surface-variant">local_shipping</span>
+                  </div>
+                  <span className="text-xs font-medium text-on-surface-variant">Kurulum</span>
                 </Link>
               </li>
             ) : (
               <>
-                <li>
-                  <Link to="/" className="flex flex-col items-center p-2 rounded-lg text-white hover:opacity-80">
-                    <span className="material-icons text-xl">home</span>
-                    <span className="text-xs mt-0.5">Anasayfa</span>
+                <li className="flex justify-center">
+                  <Link to="/" className="flex flex-col items-center gap-1 group w-full">
+                    <div className={`w-[64px] h-[32px] rounded-full flex items-center justify-center transition-colors ${location.pathname === '/' ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500'}`} style={location.pathname === '/' ? { backgroundColor: themeColor + '30', color: themeColor } : {}}>
+                      <span className="material-icons text-2xl">home</span>
+                    </div>
+                    <span className={`text-[11px] font-medium ${location.pathname === '/' ? 'text-gray-900' : 'text-gray-500'}`}>Anasayfa</span>
                   </Link>
                 </li>
-                <li>
-                  <Link to="/musteri/kabul" className="flex flex-col items-center p-2 rounded-lg text-white hover:opacity-80">
-                    <span className="material-icons text-xl">person_add</span>
-                    <span className="text-xs mt-0.5">Müşteri</span>
+                <li className="flex justify-center">
+                  <Link to="/musteri/kabul" className="flex flex-col items-center gap-1 group w-full">
+                     <div className={`w-[64px] h-[32px] rounded-full flex items-center justify-center transition-colors ${location.pathname.startsWith('/musteri') ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500'}`} style={location.pathname.startsWith('/musteri') ? { backgroundColor: themeColor + '30', color: themeColor } : {}}>
+                      <span className="material-icons text-2xl">person_add</span>
+                    </div>
+                    <span className={`text-[11px] font-medium ${location.pathname.startsWith('/musteri') ? 'text-gray-900' : 'text-gray-500'}`}>Müşteri</span>
                   </Link>
                 </li>
-                <li>
-                  <Link to="/montaj/ekle" className="flex flex-col items-center p-2 rounded-lg text-white hover:opacity-80">
-                    <span className="material-icons text-xl">local_shipping</span>
-                    <span className="text-xs mt-0.5">Montaj</span>
+                <li className="flex justify-center">
+                  <Link to="/montaj/ekle" className="flex flex-col items-center gap-1 group w-full">
+                     <div className={`w-[64px] h-[32px] rounded-full flex items-center justify-center transition-colors ${location.pathname.startsWith('/montaj') ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500'}`} style={location.pathname.startsWith('/montaj') ? { backgroundColor: themeColor + '30', color: themeColor } : {}}>
+                      <span className="material-icons text-2xl">local_shipping</span>
+                    </div>
+                    <span className={`text-[11px] font-medium ${location.pathname.startsWith('/montaj') ? 'text-gray-900' : 'text-gray-500'}`}>Montaj</span>
                   </Link>
                 </li>
-                <li>
-                  <Link to="/tema" className="flex flex-col items-center p-2 rounded-lg text-white hover:opacity-80">
-                    <span className="material-icons text-xl">brush</span>
-                    <span className="text-xs mt-0.5">Tema</span>
+                <li className="flex justify-center">
+                  <Link to="/ayarlar" className="flex flex-col items-center gap-1 group w-full">
+                     <div className={`w-[64px] h-[32px] rounded-full flex items-center justify-center transition-colors ${location.pathname.startsWith('/ayarlar') ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500'}`} style={location.pathname.startsWith('/ayarlar') ? { backgroundColor: themeColor + '30', color: themeColor } : {}}>
+                      <span className="material-icons text-2xl">settings</span>
+                    </div>
+                    <span className={`text-[11px] font-medium ${location.pathname.startsWith('/ayarlar') ? 'text-gray-900' : 'text-gray-500'}`}>Ayarlar</span>
                   </Link>
                 </li>
               </>
             )}
-            <li>
-              <Link to="/logout" className={isMontajTeam ? mobileSquareButtonClass : 'flex flex-col items-center p-2 rounded-lg text-white hover:opacity-80'}>
-                <span className="material-icons text-xl">power_settings_new</span>
-                <span className="text-xs mt-0.5">Çıkış</span>
-              </Link>
-            </li>
          </ul>
       </nav>
       )}
 
-      <div className={`${hideNavigation ? '' : 'p-4 sm:ml-24 sm:pb-4 pb-24'}`}>
+      <div className={`transition-all duration-300 ${hideNavigation ? '' : 'pt-[80px] px-4 pb-24 sm:px-6 sm:pb-8 max-w-7xl mx-auto'}`}>
          <Routes>
            <Route path="/login" element={<Login />} />
            <Route path="/logout" element={<Logout />} />
