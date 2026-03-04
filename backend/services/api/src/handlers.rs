@@ -1267,11 +1267,20 @@ pub async fn update_musteri_kabul(
             update_doc.insert("status", status_str);
             
             if status_changed {
-                // Queue SMS with +1 hour delay if status actually changed
-                if let Ok(phone) = decrypt_value(&existing_customer.telefon) {
-                    if let Some(sms_message) = build_status_sms_message(status_id, &existing_customer.ad_soyad, &existing_customer.marka_model) {
-                        queued_status_sms = Some((phone, sms_message, status_id));
+                // Check if SMS was already sent for this status before
+                let already_sent = existing_customer.sms_sent_statuses
+                    .as_ref()
+                    .map_or(false, |statuses| statuses.contains(&status_id));
+
+                if !already_sent {
+                    // Queue SMS with +1 hour delay if status actually changed and not previously sent
+                    if let Ok(phone) = decrypt_value(&existing_customer.telefon) {
+                        if let Some(sms_message) = build_status_sms_message(status_id, &existing_customer.ad_soyad, &existing_customer.marka_model) {
+                            queued_status_sms = Some((phone, sms_message, status_id));
+                        }
                     }
+                } else {
+                    println!("ℹ️ SMS zaten gönderilmiş - Statü {} için tekrar SMS kuyruğa alınmadı (Müşteri: {})", status_id, id);
                 }
             }
         } else {
@@ -1281,10 +1290,16 @@ pub async fn update_musteri_kabul(
     
     let now = chrono::Utc::now();
     update_doc.insert("updated_at", now.to_rfc3339());
+
+    // Build update operation: $set + optionally $addToSet for sms_sent_statuses
+    let mut update_op = doc! { "$set": update_doc };
+    if let Some((_, _, status_id)) = &queued_status_sms {
+        update_op.insert("$addToSet", doc! { "sms_sent_statuses": *status_id });
+    }
     
     match collection.update_one(
         doc! { "_id": object_id.clone() },
-        doc! { "$set": update_doc }
+        update_op
     ).await {
         Ok(result) => {
             if result.matched_count > 0 {
@@ -1795,5 +1810,95 @@ pub async fn migrate_teknisyen_notes(
         "message": "Teknisyen açıklaması alanı düzeltildi",
         "scanned": scanned,
         "migrated": migrated
+    })))
+}
+
+// ─── Argox OS-214 Plus PPLA Etiket Yazdırma ─────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct PrintLabelRequest {
+    pub ad_soyad: String,
+    pub telefon: String,
+    pub musteri_sikayeti: String,
+    pub tarih: String,
+}
+
+/// Türkçe karakterleri yazıcı için ASCII'ye çevir
+fn sanitize_for_printer(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            'İ' => 'I',
+            'ı' => 'I',
+            'Ş' => 'S',
+            'ş' => 'S',
+            'Ğ' => 'G',
+            'ğ' => 'G',
+            'Ü' => 'U',
+            'ü' => 'U',
+            'Ö' => 'O',
+            'ö' => 'O',
+            'Ç' => 'C',
+            'ç' => 'C',
+            _ if c.is_ascii() || c == ' ' => c,
+            _ => ' ',
+        })
+        .collect()
+}
+
+/// Metni belirli karakter sayısına kırp (UTF-8 güvenli)
+fn truncate_for_label(text: &str, max_chars: usize) -> String {
+    text.chars().take(max_chars).collect()
+}
+
+pub async fn print_customer_label(
+    Json(req): Json<PrintLabelRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let ad_soyad = truncate_for_label(&sanitize_for_printer(&req.ad_soyad), 24);
+    let telefon = truncate_for_label(&sanitize_for_printer(&req.telefon), 24);
+    let ariza = truncate_for_label(&sanitize_for_printer(&req.musteri_sikayeti), 40);
+    let tarih = truncate_for_label(&sanitize_for_printer(&req.tarih), 24);
+
+    // PPLA komutu - Argox OS-214 Plus (203 DPI, 58mm x 40mm etiket)
+    // Format: \x02L = etiket başlat, D11 = yoğunluk
+    // Metin satırı: 1(text) Font HMul VMul Row(3) Col(4) DATA
+    let ppla_cmd = format!(
+        "\x02L\n\
+         D11\n\
+         131100001000010{}\n\
+         131100600500010Tel:{}\n\
+         121101201000010{}\n\
+         131101801500010{}\n\
+         E\n",
+        ad_soyad, telefon, ariza, tarih
+    );
+
+    let printer_path = "/dev/usb/lp0";
+
+    // Yazıcıya gönder
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(printer_path)
+        .map_err(|e| {
+            println!("🖨️ ❌ Yazıcı bağlantı hatası: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Yazıcı bağlantısı başarısız ({}): {}", printer_path, e))
+        })?;
+
+    file.write_all(ppla_cmd.as_bytes())
+        .map_err(|e| {
+            println!("🖨️ ❌ Yazıcıya gönderim hatası: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Yazıcıya gönderim başarısız: {}", e))
+        })?;
+
+    file.flush()
+        .map_err(|e| {
+            println!("🖨️ ❌ Yazıcı flush hatası: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Yazıcı flush başarısız: {}", e))
+        })?;
+
+    println!("🖨️ ✅ Etiket yazdırıldı: {} - {}", ad_soyad, telefon);
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Etiket yazdırıldı"
     })))
 }

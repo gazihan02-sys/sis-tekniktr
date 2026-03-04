@@ -1,0 +1,266 @@
+KAPATILMAMIŞ MONTAJ KAYITLARI - Toplam: 22
+====================================================================================================
+
+1. KAYIT
+   ID          : 776d57a0931540c08297de02
+   Ad Soyad    : BURCU TEKIN CÖMERT
+   Model       : 75UA85006LA.APEQ
+   Telefon     : 05322422125
+   Adres       : altınşehir mh. gazihan dede cad. no 45/9 merkez 02000 ADIYAMAN
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : RNU260227087489
+   Oluşturulma : 2026-02-27 11:57:12.398000
+   Güncelleme  : 2026-03-02 06:48:38.995000
+   ---
+
+2. KAYIT
+   ID          : dcb0b5b26dda4b35b0dcffe9
+   Ad Soyad    : DEMO
+   Model       : DEMO
+   Telefon     : 0454551
+   Adres       : Msksk
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 11:55:11.265000
+   Güncelleme  : 2026-02-27 11:55:28.744000
+   ---
+
+3. KAYIT
+   ID          : b79ed3deb9e64491926515ec
+   Ad Soyad    : FEW
+   Model       : FEW
+   Telefon     : 0efwf
+   Adres       : few
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 11:18:29.031000
+   Güncelleme  : 2026-02-27 11:39:23.330000
+   ---
+
+4. KAYIT
+   ID          : c9aa699b696a40b48e987b81
+   Ad Soyad    : DEMO
+   Model       : MFWFWF
+   Telefon     : 05300735686
+   Adres       : PHIDKFDFDSFF
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 11:16:28.916000
+   Güncelleme  : 2026-02-27 11:39:26.767000
+   ---
+
+5. KAYIT
+   ID          : c36429054e4c48968fd6cc91
+   Ad Soyad    : RECEP TEKİN
+   Model       : PROFILO TV 55
+   Telefon     : 05414220489
+   Adres       : İNDERE  MALTEPE MEVKİ MALTEPE KÜME EVLERİ BİNA B2A DAİRE 3
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 07:26:27.991000
+   Güncelleme  : 2026-03-03 07:21:18.694000
+   ---
+
+6. KAYIT
+   ID          : 29b3baea7bf743ab963df935
+   Ad Soyad    : İBRAHİM YILDIZ
+   Model       : PROFİLO 75PA725EQG
+   Telefon     : 05542750202
+   Adres       : İLDERE TOKİ 16. PARSEL A2 D3
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 07:22:18.670000
+   Güncelleme  : 2026-02-27 11:48:35.415000
+   ---
+
+7. KAYIT
+   ID          : 5384d18321e64a68b9886441
+   Ad Soyad    : HÜSEYIN LAYIK
+   Model       : 50QNED7S6QA.APD
+   Telefon     : 05365220763
+   Adres       : İndere toki konutları karadağ ortaokulu yanındaki bina B-14 no:11, B-14, Maltepe sokak, Adıyaman,
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : RNU260226083838
+   Oluşturulma : 2026-02-27 07:10:33.866000
+   Güncelleme  : 2026-02-27 11:48:53.807000
+   ---
+
+8. KAYIT
+   ID          : fd3630a690474ae39dd1a079
+   Ad Soyad    : MEHMET BİLGİN
+   Model       : TCL55V6BGTV
+   Telefon     : 05321653134
+   Adres       : YEŞİLYURT MAH.HISLİ MANSUR CAD. NO 115 KAT 4 DAİRE 7 HUZUR APT
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 07:03:27.742000
+   Güncelleme  : 2026-03-03 10:04:00.163000
+   ---
+
+9. KAYIT
+   ID          : b98d42994aa147659728d1e2
+   Ad Soyad    : ALİ TEKTAŞ
+   Model       : TCL65C655GTV
+   Telefon     : 05324779913
+   Adres       : ALTINŞEHİR MAH.GÜZELYURT VİLLA EVLERİ
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-27 07:01:32.086000
+   Güncelleme  : 2026-02-28 13:45:23.288000
+   ---
+
+10. KAYIT
+   ID          : afdd9fee1ab74770b92294cf
+   Ad Soyad    : EMRAH ZEYREK
+   Model       : OLED55B56LA.APDZ
+   Telefon     : 05315100033
+   Adres       : indere toki a3 parsel cevahir yapı d2A blok kat 3 daie 16 merkez 02000 ADIYAMAN
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : RNU260226080456
+   Oluşturulma : 2026-02-26 13:54:59.685000
+   Güncelleme  : 2026-02-27 14:22:38.574000
+   ---
+
+11. KAYIT
+   ID          : ec0c29a0348747a89120ed5f
+   Ad Soyad    : TAYYİP TAŞKIN
+   Model       : TCL65P79KGTV
+   Telefon     : 05425220275
+   Adres       : YUNUS EMRE MAH.29107 SK SAFVAN STS B BLOK DAİRE 4
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 14:24:51.134000
+   Güncelleme  : 2026-02-27 11:48:22.919000
+   ---
+
+12. KAYIT
+   ID          : 61b2f96e20b5497aaf7b1f0c
+   Ad Soyad    : İBRAHİM HALİL AYAYDIN
+   Model       : TCL32S5KGTV
+   Telefon     : 05070373802
+   Adres       : KARAPINAR MAH.KENT CAD GİRİTLİ İNŞAAT NO.9 K.5 D.21
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 13:28:45.230000
+   Güncelleme  : 2026-02-27 11:48:15.376000
+   ---
+
+13. KAYIT
+   ID          : 45e741b458d04faf9b2ffeeb
+   Ad Soyad    : ABDULLAH EROL
+   Model       : TCL55P79KGTV
+   Telefon     : 05449752818
+   Adres       : YENİMAH. MAH.26143 SK NO 3 D 2
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 13:20:01.392000
+   Güncelleme  : 2026-02-27 11:48:06.800000
+   ---
+
+14. KAYIT
+   ID          : 699e9ccfdf9a25c5cdfc384d
+   Ad Soyad    : RUKİYE ORHAN
+   Model       : PROFİLO 58PA525EG
+   Telefon     : 05551602702
+   Adres       : ADIYAMAN MERKEZ  CUMHURIYET MAH 250140 SOKAK NO:3
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:55:11.378000
+   Güncelleme  : 2026-02-28 12:15:45.584000
+   ---
+
+15. KAYIT
+   ID          : 699e9ca3df9a25c5cdfc384c
+   Ad Soyad    : YUSUF BERKKAYA
+   Model       : TCL55C655PROGTV
+   Telefon     : 05374427991
+   Adres       : İLDERE TOKİ KONUTLARI 12. PARSEL B12 BLOK DAİRE 4
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:54:27.904000
+   Güncelleme  : 2026-02-27 11:47:51
+   ---
+
+16. KAYIT
+   ID          : 699e9c78df9a25c5cdfc384b
+   Ad Soyad    : TOPRAK KURT TEKİN
+   Model       : XIAOMI TV
+   Telefon     : 05511726472
+   Adres       : ALTINŞEHİR MAH. SEFA KENT 5 SİTESİ 3037 A- BLOK DAİRE 10
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:53:44.870000
+   Güncelleme  : 2026-02-27 11:47:19.904000
+   ---
+
+17. KAYIT
+   ID          : 699e9c25df9a25c5cdfc3849
+   Ad Soyad    : AYŞE KAYA
+   Model       : 55UA85006LA.APEZ
+   Telefon     : 05536680522
+   Adres       : altınşehir mah 3037. sk apar 15A d11 k6 ADIYAMAN,
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:52:21.122000
+   Güncelleme  : 2026-02-27 11:46:52.313000
+   ---
+
+18. KAYIT
+   ID          : 699e9bf6df9a25c5cdfc3848
+   Ad Soyad    : VEYSEL DICLE
+   Model       : 65QNED86A6A.APDZ
+   Telefon     : 05068329518
+   Adres       : Niwlefe, SİTESİ , Karapınar MH , Karapınar CD  B BLOK DAİRE 14 TÜRKİYE PETROLLERİ ÇAPRAZI KARŞISI , Merkez
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : RNU260224065626
+   Oluşturulma : 2026-02-25 06:51:34.322000
+   Güncelleme  : 2026-02-27 11:46:32.346000
+   ---
+
+19. KAYIT
+   ID          : 699e9bd3df9a25c5cdfc3847
+   Ad Soyad    : BEKİR BOZKURT
+   Model       : PHILIPS TV
+   Telefon     : 05313486202
+   Adres       : bahçelievler mah
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:50:59.505000
+   Güncelleme  : 2026-02-27 11:49:08.038000
+   ---
+
+20. KAYIT
+   ID          : 699e9b69df9a25c5cdfc3846
+   Ad Soyad    : MEHMET SARAY
+   Model       : PHILIPS XU5000
+   Telefon     : 05347331588
+   Adres       : KARŞIKAYA MAH FİLİSTİN CAD DOKTOR ALİ ÖZER APT. B BLOK KAT5 D:10 NO:29   KAHTAAA
+   Servis Tipi : ROBOT_KURULUM
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:49:13.607000
+   Güncelleme  : 2026-02-27 11:47:04.041000
+   ---
+
+21. KAYIT
+   ID          : 699e9a3bdf9a25c5cdfc3845
+   Ad Soyad    : ENDER TOPRAK
+   Model       : XIAOMI TV A 2026
+   Telefon     : 05428448573
+   Adres       : Altınşehir Mahellesi 3037 sokak sefa kent 5 A blok kat 4 daire 10
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:44:11.142000
+   Güncelleme  : 2026-02-27 11:46:09.602000
+   ---
+
+22. KAYIT
+   ID          : 699e99e9df9a25c5cdfc3844
+   Ad Soyad    : ZEKİYE DARAKÇI
+   Model       : XIAOMI TV A 2026
+   Telefon     : 05428448573
+   Adres       : Adıyaman Merkez siteler mah Özdemir bayraktar cad Örenli Toki konutları 2. Etap DB-12 blok kat 2 daire 10
+   Servis Tipi : TV_MONTAJ
+   RNU İş Emri : 
+   Oluşturulma : 2026-02-25 06:42:49.094000
+   Güncelleme  : 2026-02-28 12:14:43.150000
+   ---

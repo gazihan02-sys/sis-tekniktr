@@ -15,7 +15,7 @@ use std::env;
 use dotenvy::dotenv;
 use mongodb::Client as MongoClient;
 
-use handlers::{AppState, create_montaj_kayit, create_musteri_kabul, get_musteri_kabul, list_montaj_kayitlari, list_musteri_kabul, get_musteri_kabul_stats, list_musteri_kabul_by_status, delete_musteri_kabul, update_musteri_kabul, resend_musteri_sms, login, get_bing_daily_image, create_user, list_users, update_user, delete_user, migrate_teknisyen_notes, get_system_sync, create_delete_otp, upload_fatura_public, update_montaj_kayit, delete_montaj_kayit, get_montaj_kayit, close_montaj_kayit, download_montaj_files_zip};
+use handlers::{AppState, create_montaj_kayit, create_musteri_kabul, get_musteri_kabul, list_montaj_kayitlari, list_musteri_kabul, get_musteri_kabul_stats, list_musteri_kabul_by_status, delete_musteri_kabul, update_musteri_kabul, resend_musteri_sms, login, get_bing_daily_image, create_user, list_users, update_user, delete_user, migrate_teknisyen_notes, get_system_sync, create_delete_otp, upload_fatura_public, update_montaj_kayit, delete_montaj_kayit, get_montaj_kayit, close_montaj_kayit, download_montaj_files_zip, print_customer_label};
 use sms_queue::start_sms_queue_worker;
 
 #[tokio::main]
@@ -58,6 +58,7 @@ async fn main() {
         .route("/api/fatura-upload/:id", put(upload_fatura_public))
         .route("/api/musteri-kabul/:id/resend-sms", post(resend_musteri_sms))
         .route("/api/musteri-kabul/:id", get(get_musteri_kabul).delete(delete_musteri_kabul).put(update_musteri_kabul))
+        .route("/api/print-label", post(print_customer_label))
         .with_state(state)
         .layer(DefaultBodyLimit::max(15 * 1024 * 1024))
         .layer(CorsLayer::permissive());

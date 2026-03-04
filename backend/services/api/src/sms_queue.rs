@@ -124,6 +124,9 @@ async fn process_due_sms_queue(db: &Database) -> Result<(), String> {
                             "$set": {
                                 "sms_gonderildi": true,
                                 "sms_mesaj": item.message,
+                            },
+                            "$addToSet": {
+                                "sms_sent_statuses": item.status_id,
                             }
                         },
                     )

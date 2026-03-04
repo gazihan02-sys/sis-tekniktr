@@ -1224,7 +1224,28 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
 
       if (response.ok) {
         const result = await response.json();
-        const successMsg = `✅ ${result.ad_soyad} - Müşteri başarıyla kaydedildi.\n\n📱 Fatura yükleme linki SMS ile gönderildi.`;
+
+        // Otomatik etiket yazdır (Argox OS-214 Plus)
+        try {
+          const now = new Date();
+          const printRes = await fetch('/api/print-label', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ad_soyad: result.ad_soyad || '',
+              telefon: result.telefon || '',
+              musteri_sikayeti: result.musteri_sikayeti || '',
+              tarih: now.toLocaleDateString('tr-TR'),
+            })
+          });
+          if (!printRes.ok) {
+            console.warn('Etiket yazdırılamadı:', await printRes.text());
+          }
+        } catch (printErr) {
+          console.warn('Etiket yazdırma hatası:', printErr);
+        }
+
+        const successMsg = `✅ ${result.ad_soyad} - Müşteri başarıyla kaydedildi.\n\n📱 Fatura yükleme linki SMS ile gönderildi.\n🖨️ Etiket yazdırıldı.`;
         triggerDataRefresh();
         navigate('/', { state: { successMessage: successMsg } });
       } else {

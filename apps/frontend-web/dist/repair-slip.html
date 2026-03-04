@@ -1,43 +1,108 @@
-<!doctype html>
-<html lang="tr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tamir Fişi</title>
-    <link rel="stylesheet" href="/repair-slip.css" />
-    <link rel="stylesheet" href="/repair-slip-print.css" media="print" />
-  </head>
-  <body class="repair-slip-body">
-    <div class="repair-slip-page">
-      <div class="repair-slip-toolbar">
-        <button class="repair-slip-print-btn" onclick="window.print()">Yazdır</button>
-      </div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<style>
+@page {
+  size: 58mm 40mm;
+  margin: 0;
+  padding: 0;
+}
 
-      <div class="repair-slip" id="slipRoot">
-        <div class="repair-slip-content">
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-ad_soyad">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-telefon">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value" id="val-model">-</div></div>
-            <div class="repair-slip-row"><div class="repair-slip-value repair-slip-fault" id="val-ariza">-</div></div>
-        </div>
-          <div class="repair-slip-footer" id="val-tarih">-</div>
-      </div>
-    </div>
+body {
+  margin: 0;
+  padding: 0.5mm 0.3mm 0.5mm 1mm;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.1;
+  width: 57mm;
+  max-width: 57mm;
+  height: 39mm;
+  max-height: 39mm;
+  overflow: hidden;
+  page-break-after: avoid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    <script>
-      const params = new URLSearchParams(window.location.search);
-      const setText = (id, key) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const value = params.get(key);
-        el.textContent = value && value.trim() ? value : '-';
-      };
+.label {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2mm;
+  overflow: hidden;
+  padding: 0;
+  text-align: center;
+}
 
-      setText('val-ad_soyad', 'ad_soyad');
-      setText('val-telefon', 'telefon');
-      setText('val-model', 'model');
-      setText('val-ariza', 'ariza');
-      setText('val-tarih', 'tarih');
-    </script>
-  </body>
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5px;
+  padding: 0;
+  margin: 0;
+  min-height: 3mm;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+}
+
+.label strong {
+  font-weight: bold;
+  margin-right: 2px;
+}
+
+@media print {
+  * {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    page-break-after: avoid;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 1rem;
+    height: 100%;
+    width: 100%;
+  }
+  
+  html {
+    overflow: hidden;
+  }
+}
+</style>
+</head>
+<body>
+<div class="label">
+  <div class="row"><strong>Ad:</strong> <span id="val-ad_soyad">-</span></div>
+  <div class="row"><strong>Tel:</strong> <span id="val-telefon">-</span></div>
+  <div class="row"><strong>Model:</strong> <span id="val-model">-</span></div>
+  <div class="row"><span id="val-ariza">-</span></div>
+  <div class="row"><strong>Tarih:</strong> <span id="val-tarih">-</span></div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const setText = (id, key) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let value = params.get(key);
+  if (value) {
+    value = decodeURIComponent(value).trim();
+  }
+  el.textContent = value && value.length > 0 ? value : '-';
+};
+
+setText('val-ad_soyad', 'ad_soyad');
+setText('val-telefon', 'telefon');
+setText('val-model', 'model');
+setText('val-ariza', 'ariza');
+setText('val-tarih', 'tarih');
+</script>
+</body>
 </html>

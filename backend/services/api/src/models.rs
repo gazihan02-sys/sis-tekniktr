@@ -97,6 +97,8 @@ pub struct MusteriKabul {
     pub status: String, // teknisyene_verildi, vs
     pub sms_gonderildi: bool,
     pub sms_mesaj: Option<String>,
+    #[serde(default)]
+    pub sms_sent_statuses: Option<Vec<i32>>,
     #[serde(deserialize_with = "deserialize_datetime")]
     pub created_at: DateTime<Utc>,
     #[serde(deserialize_with = "deserialize_datetime")]
@@ -200,6 +202,7 @@ impl MusteriKabul {
             status: status_string,
             sms_gonderildi: false,
             sms_mesaj: None,
+            sms_sent_statuses: Some(vec![]),
             created_at: now,
             updated_at: now,
         }

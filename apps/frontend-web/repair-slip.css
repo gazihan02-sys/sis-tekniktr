@@ -57,7 +57,7 @@
 
 .repair-slip-title {
 	text-align: center;
-	font-size: 8.5px;
+	font-size: 14px;
 	font-weight: 700;
 	margin-bottom: 0.6mm;
 }
@@ -67,9 +67,9 @@
 	align-items: center;
 	gap: 0.4mm;
 	margin-bottom: 0;
-	font-size: 6.8px;
-	line-height: 1.05;
-	padding: 0.35mm 0.5mm;
+	font-size: 12px;
+	line-height: 1.2;
+	padding: 0.7mm 0.8mm;
 	background: #f8fafc;
 	border: 1px solid #e2e8f0;
 	border-radius: 1mm;
@@ -83,21 +83,25 @@
 
 .repair-slip-value {
 	flex: 1;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: break-word;
 	font-weight: 600;
 	letter-spacing: 0.1px;
+	line-height: 1.2;
+	max-height: 5.5mm;
 }
 
 .repair-slip-fault {
-	white-space: nowrap;
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: break-word;
 	color: #b91c1c;
 }
 
 .repair-slip-footer {
 	text-align: center;
-	font-size: 6.2px;
+	font-size: 11px;
 	border-top: 1px dashed #94a3b8;
 	padding-top: 0.2mm;
 	color: #475569;
