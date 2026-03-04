@@ -1,4 +1,3 @@
-mod db;
 mod models;
 mod handlers;
 mod crypto;
@@ -8,16 +7,14 @@ mod sms_queue;
 
 use axum::{
     extract::DefaultBodyLimit,
-    routing::{get, post, delete, put},
+    routing::{get, post, put},
     Router,
-    http::StatusCode,
-    response::{IntoResponse, Response},
 };
 use tower_http::cors::CorsLayer;
 use std::env;
 use dotenvy::dotenv;
+use mongodb::Client as MongoClient;
 
-use db::connect_db;
 use handlers::{AppState, create_montaj_kayit, create_musteri_kabul, get_musteri_kabul, list_montaj_kayitlari, list_musteri_kabul, get_musteri_kabul_stats, list_musteri_kabul_by_status, delete_musteri_kabul, update_musteri_kabul, resend_musteri_sms, login, get_bing_daily_image, create_user, list_users, update_user, delete_user, migrate_teknisyen_notes, get_system_sync, create_delete_otp, upload_fatura_public, update_montaj_kayit, delete_montaj_kayit, get_montaj_kayit, close_montaj_kayit, download_montaj_files_zip};
 use sms_queue::start_sms_queue_worker;
 
@@ -27,19 +24,18 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // MongoDB connection
-    let database = match connect_db().await {
-        Ok(db) => {
-            println!("✓ Database connected");
-            db
-        }
-        Err(e) => {
-            eprintln!("✗ Database connection failed: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let mongo_url = env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+    let mongo_db_name = env::var("MONGODB_DB").unwrap_or_else(|_| "sis_teknik".to_string());
+    let mongo_client = MongoClient::with_uri_str(&mongo_url)
+        .await
+        .expect("Failed to connect to MongoDB");
+    let db = mongo_client.database(&mongo_db_name);
+    println!("✓ MongoDB connected");
 
-    start_sms_queue_worker(database.clone());
-    let state = AppState { db: database };
+    // Start SMS queue worker
+    start_sms_queue_worker(db.clone());
+
+    let state = AppState { db };
 
     // Routes
     let app = Router::new()

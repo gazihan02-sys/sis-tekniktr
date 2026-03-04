@@ -159,6 +159,23 @@ pub struct MusteriKabulResponse {
     pub created_at: String,
 }
 
+/// Lightweight list response — belge fields are booleans (has/doesn't have)
+#[derive(Debug, Serialize)]
+pub struct MusteriKabulListResponse {
+    pub id: String,
+    pub ad_soyad: String,
+    pub telefon: String,
+    pub marka_model: String,
+    pub servis_tipi: Option<String>,
+    pub musteri_sikayeti: String,
+    pub status: String,
+    pub belge_f: bool,
+    pub belge_g: bool,
+    pub belge_u: bool,
+    pub belge_a: bool,
+    pub created_at: String,
+}
+
 impl MusteriKabul {
     pub fn new(req: CreateMusteriKabulRequest) -> Self {
         let now = Utc::now();
@@ -208,6 +225,26 @@ impl MusteriKabul {
             belge_a: self.belge_a,
             status: self.status,
             sms_gonderildi: self.sms_gonderildi,
+            created_at: self.created_at.to_rfc3339(),
+        }
+    }
+
+    /// Lightweight conversion for list views — no belge content, just presence flags
+    pub fn to_list_response(self) -> MusteriKabulListResponse {
+        let decrypted_phone = decrypt_value(&self.telefon).unwrap_or_else(|_| self.telefon.clone());
+
+        MusteriKabulListResponse {
+            id: self.id.map(|id| id.to_hex()).unwrap_or_default(),
+            ad_soyad: self.ad_soyad,
+            telefon: decrypted_phone,
+            marka_model: self.marka_model,
+            servis_tipi: self.servis_tipi,
+            musteri_sikayeti: self.musteri_sikayeti,
+            status: self.status,
+            belge_f: self.belge_f.as_ref().map_or(false, |s| !s.is_empty()),
+            belge_g: self.belge_g.as_ref().map_or(false, |s| !s.is_empty()),
+            belge_u: self.belge_u.as_ref().map_or(false, |s| !s.is_empty()),
+            belge_a: self.belge_a.as_ref().map_or(false, |s| !s.is_empty()),
             created_at: self.created_at.to_rfc3339(),
         }
     }

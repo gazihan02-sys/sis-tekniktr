@@ -3,15 +3,14 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use mongodb::Database;
-use mongodb::bson::{oid::ObjectId, doc, DateTime, Document};
 use rand::Rng;
 use serde::{Deserialize, Serialize, Deserializer};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use std::io::{Cursor, Write};
 use zip::write::SimpleFileOptions;
+use mongodb::bson::{doc, oid::ObjectId, Document, DateTime};
 
-use crate::models::{MusteriKabul, CreateMusteriKabulRequest, MusteriKabulResponse, status_id_to_string, status_string_to_id, status_id_aliases};
+use crate::models::{MusteriKabul, CreateMusteriKabulRequest, MusteriKabulResponse, MusteriKabulListResponse, status_id_to_string, status_string_to_id, status_id_aliases};
 use crate::crypto::{encrypt_value, decrypt_value};
 use crate::sms::{send_sms, build_sms_message, build_montaj_ariza_sms_message, build_robot_kurulum_sms_message, build_tv_kurulum_sms_message, build_status_sms_message};
 use crate::auth::{LoginRequest, LoginResponse, generate_token, verify_admin_password};
@@ -22,10 +21,10 @@ const DELETE_OTP_EXPIRE_MINUTES: i64 = 10;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: Database,
+    pub db: mongodb::Database,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -34,30 +33,10 @@ pub struct User {
     pub username: String,
     #[serde(default)]
     pub password: String,
-    #[serde(default)]
     pub theme_color: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_user_level")]
     pub level: Option<String>,
     pub created_at: Option<DateTime>,
-}
-
-fn deserialize_user_level<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
-
-    let normalized = match value {
-        None => None,
-        Some(serde_json::Value::String(text)) => normalize_user_level(&text).map(|v| v.to_string()),
-        Some(serde_json::Value::Number(number)) => number
-            .as_i64()
-            .and_then(|n| normalize_user_level(&n.to_string()))
-            .map(|v| v.to_string()),
-        _ => None,
-    };
-
-    Ok(normalized)
+    pub updated_at: Option<DateTime>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1492,7 +1471,7 @@ pub async fn create_user(
         return Err((StatusCode::CONFLICT, "Bu kullanıcı adı zaten kullanılıyor".to_string()));
     }
 
-    let user = User {
+    let new_user = User {
         id: None,
         ad_soyad,
         username: username.clone(),
@@ -1500,9 +1479,10 @@ pub async fn create_user(
         theme_color: None,
         level: Some(level.clone()),
         created_at: Some(DateTime::now()),
+        updated_at: None,
     };
 
-    users.insert_one(user)
+    users.insert_one(&new_user)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
@@ -1520,13 +1500,13 @@ pub async fn list_users(
 ) -> Result<Json<Vec<UserListItem>>, (StatusCode, String)> {
     let users = state.db.collection::<User>("users");
 
-    let admin_exists = users
+    // Create admin if it doesn't exist
+    let admin_check = users
         .find_one(doc! { "username": "admin" })
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
-        .is_some();
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
-    if !admin_exists {
+    if admin_check.is_none() {
         let admin_user = User {
             id: None,
             ad_soyad: "ADMIN".to_string(),
@@ -1535,15 +1515,14 @@ pub async fn list_users(
             theme_color: None,
             level: Some("level1".to_string()),
             created_at: Some(DateTime::now()),
+            updated_at: None,
         };
-
-        users.insert_one(admin_user)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+        let _ = users.insert_one(&admin_user).await;
     }
 
     let mut cursor = users
         .find(doc! {})
+        .sort(doc! { "username": 1 })
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
@@ -1552,36 +1531,38 @@ pub async fn list_users(
     while cursor
         .advance()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Cursor error: {}", e)))?
     {
         let user: User = cursor
             .deserialize_current()
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Deserialize error: {}", e)))?;
 
         let is_root_user = user.username == "admin";
-        let level = effective_user_level(&user.username, user.level.as_deref());
+        let level_str = effective_user_level(&user.username, user.level.as_deref());
+        let id_str = user.id.map(|oid| oid.to_hex()).unwrap_or_default();
+
+        let created_at_ms = user.created_at
+            .map(|d| d.timestamp_millis())
+            .unwrap_or(0);
 
         results.push(UserListItem {
-            id: user.id.map(|id| id.to_hex()).unwrap_or_default(),
+            id: id_str,
             ad_soyad: if user.ad_soyad.is_empty() { user.username.to_uppercase() } else { user.ad_soyad },
             username: user.username,
             theme_color: user.theme_color,
-            level: level.clone(),
-            level_label: level_to_label(&level).to_string(),
-            created_at_ms: user.created_at.map(|d| d.timestamp_millis()).unwrap_or(0),
+            level: level_str.clone(),
+            level_label: level_to_label(&level_str).to_string(),
+            created_at_ms,
             is_root: is_root_user,
             can_delete: !is_root_user,
         });
     }
 
+    // Sort: admin first, then alphabetical
     results.sort_by(|a, b| {
-        if a.is_root == b.is_root {
-            a.username.cmp(&b.username)
-        } else if a.is_root {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        }
+        if a.username == "admin" { std::cmp::Ordering::Less }
+        else if b.username == "admin" { std::cmp::Ordering::Greater }
+        else { a.username.cmp(&b.username) }
     });
 
     Ok(Json(results))
@@ -1592,10 +1573,10 @@ pub async fn update_user(
     Path(id): Path<String>,
     Json(req): Json<UpdateUserRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let users = state.db.collection::<User>("users");
-
     let object_id = ObjectId::parse_str(&id)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid ID format".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Geçersiz kullanıcı ID".to_string()))?;
+
+    let users = state.db.collection::<User>("users");
 
     let existing = users
         .find_one(doc! { "_id": object_id })
@@ -1603,22 +1584,25 @@ pub async fn update_user(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
         .ok_or((StatusCode::NOT_FOUND, "Kullanıcı bulunamadı".to_string()))?;
 
+    let existing_username = existing.username.clone();
+
     let mut update_doc = doc! {};
 
-    if let Some(ad_soyad) = req.ad_soyad {
+    if let Some(ad_soyad) = &req.ad_soyad {
         let value = ad_soyad.trim().to_uppercase();
         if !value.is_empty() {
             update_doc.insert("ad_soyad", value);
         }
     }
 
-    if let Some(username) = req.username {
+    if let Some(username) = &req.username {
         let value = username.trim().to_lowercase();
         if !value.is_empty() {
-            if existing.username == "admin" && value != "admin" {
+            if existing_username == "admin" && value != "admin" {
                 return Err((StatusCode::BAD_REQUEST, "Kök kullanıcının kullanıcı adı değiştirilemez".to_string()));
             }
 
+            // Check for duplicate username
             let duplicate = users
                 .find_one(doc! { "username": &value, "_id": { "$ne": object_id } })
                 .await
@@ -1632,26 +1616,26 @@ pub async fn update_user(
         }
     }
 
-    if let Some(password) = req.password {
+    if let Some(password) = &req.password {
         let value = password.trim().to_string();
         if !value.is_empty() {
             update_doc.insert("password", value);
         }
     }
 
-    if let Some(level) = req.level {
-        let value = normalize_user_level(&level)
+    if let Some(level) = &req.level {
+        let value = normalize_user_level(level)
             .ok_or((StatusCode::BAD_REQUEST, "Geçersiz kullanıcı seviyesi".to_string()))?
             .to_string();
 
-        if existing.username == "admin" && value != "level1" {
+        if existing_username == "admin" && value != "level1" {
             return Err((StatusCode::BAD_REQUEST, "Admin kullanıcı sadece level1 olabilir".to_string()));
         }
 
         update_doc.insert("level", value);
     }
 
-    if let Some(theme_color) = req.theme_color {
+    if let Some(theme_color) = &req.theme_color {
         let value = theme_color.trim().to_uppercase();
         let is_valid_hex = value.len() == 7
             && value.starts_with('#')
@@ -1668,9 +1652,14 @@ pub async fn update_user(
         return Err((StatusCode::BAD_REQUEST, "Güncellenecek alan yok".to_string()));
     }
 
-    users.update_one(doc! { "_id": object_id }, doc! { "$set": update_doc })
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+    update_doc.insert("updated_at", DateTime::now());
+
+    users.update_one(
+        doc! { "_id": object_id },
+        doc! { "$set": update_doc }
+    )
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -1682,10 +1671,10 @@ pub async fn delete_user(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let users = state.db.collection::<User>("users");
-
     let object_id = ObjectId::parse_str(&id)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid ID format".to_string()))?;
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Geçersiz kullanıcı ID".to_string()))?;
+
+    let users = state.db.collection::<User>("users");
 
     let existing = users
         .find_one(doc! { "_id": object_id })
