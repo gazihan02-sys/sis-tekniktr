@@ -2,6 +2,7 @@ import { useEffect, useState, createContext, useContext, useRef } from 'react'
 import { initFlowbite } from 'flowbite'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, useParams, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
+import Spor from './pages/Spor'
 
 // Create Theme Context
 const ThemeContext = createContext();
@@ -1224,28 +1225,7 @@ function MusteriKabul({showBelgeModal, setShowBelgeModal, selectedBelgeData, set
 
       if (response.ok) {
         const result = await response.json();
-
-        // Otomatik etiket yazdır (Argox OS-214 Plus)
-        try {
-          const now = new Date();
-          const printRes = await fetch('/api/print-label', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ad_soyad: result.ad_soyad || '',
-              telefon: result.telefon || '',
-              musteri_sikayeti: result.musteri_sikayeti || '',
-              tarih: now.toLocaleDateString('tr-TR'),
-            })
-          });
-          if (!printRes.ok) {
-            console.warn('Etiket yazdırılamadı:', await printRes.text());
-          }
-        } catch (printErr) {
-          console.warn('Etiket yazdırma hatası:', printErr);
-        }
-
-        const successMsg = `✅ ${result.ad_soyad} - Müşteri başarıyla kaydedildi.\n\n📱 Fatura yükleme linki SMS ile gönderildi.\n🖨️ Etiket yazdırıldı.`;
+        const successMsg = `✅ ${result.ad_soyad} - Müşteri başarıyla kaydedildi.\n\n📱 Fatura yükleme linki SMS ile gönderildi.`;
         triggerDataRefresh();
         navigate('/', { state: { successMessage: successMsg } });
       } else {
@@ -3901,6 +3881,7 @@ function Layout({ themeColor, setThemeColor }) {
          <Routes>
            <Route path="/login" element={<Login />} />
            <Route path="/logout" element={<Logout />} />
+           <Route path="/spor" element={<Spor />} />
            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
            <Route path="/status/:status" element={<PrivateRoute><StatusList showBelgeModal={showBelgeModal} setShowBelgeModal={setShowBelgeModal} selectedBelgeData={selectedBelgeData} setSelectedBelgeData={setSelectedBelgeData} /></PrivateRoute>} />
            <Route path="/edit/:customerId" element={<PrivateRoute><Edit /></PrivateRoute>} />
